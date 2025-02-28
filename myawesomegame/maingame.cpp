@@ -100,7 +100,7 @@ public:
 	};
 
 	void initiateCombat() {
-		std::cout << "Battle started, make your first move" << std::endl << "1) Attack" << std::endl << "2)Defend" << std::endl << "3) Spells" << std::endl << "4) Items" << std::endl << "5) Flee";
+		while (battling == true)  {
 		
 		std::cin >> input;
 
