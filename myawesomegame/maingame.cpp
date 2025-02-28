@@ -4,27 +4,45 @@
 #include <Windows.h>
 #include <ctime>
 #include <thread>
+
 int input = 0;
-int turnsElapsed = 0;
+bool battling = true;
 
 class character {
 
 private:
 	//things the player can change
-	std::string name = "";
-	int endurance = 0;
-	int strength = 0;
-	int dexterity = 0;
-	int wisdom = 0;
-	int luck = 0;
-	int faith = 0;
+	std::string name = "John Placeholder";
+	unsigned short endurance = 1;
+	unsigned short strength = 1;
+	unsigned short dexterity = 1;
+	unsigned short wisdom = 1;
+	unsigned short luck = 1;
+	unsigned short faith = 1;
 public:
 	//things the player cannot change
 	int playerHealth = 0;
 	int playerMaxHealth = 0;
 	int defense = 0;
 	int magicDefense = 0;
-	int spellsAvailable = 0;
+	unsigned short spellsAvailable = 0;
+	
+
+	void displayStats() {
+
+		std::cout << "Player Name: " << name << std::endl;
+		std::cout << "Max Health: " << playerMaxHealth << std::endl;
+		std::cout << "Current Health: " << playerHealth << std::endl;
+		std::cout << "Defense: " << defense << std::endl;
+		std::cout << "Magic Defense: " << magicDefense << std::endl;
+		std::cout << "--------Stats--------" << std::endl;
+		std::cout << "Endurance: " << endurance << std::endl
+			<< "Strength: " << strength << std::endl
+			<< "Dexterity: " << dexterity << std::endl
+			<< "Wisdom: " << wisdom << std::endl
+			<< "Luck: " << luck << std::endl
+			<< "Faith: " << faith << std::endl;
+	}
 
 	friend class combatHandler;
 };
@@ -64,7 +82,7 @@ public:
 	};
 
 	void takeDamage(int damage){
-		std::cout << "Enemy took " << damage << " damage!" << std::endl;
+		std::cout << std::endl << "Enemy took " << damage << " damage!" << std::endl;
 		enemyHealth -= damage;
 
 	}
@@ -77,7 +95,7 @@ public:
 		std::cout << "Defense: " << defense << std::endl;
 		std::cout << "Attack: " << attack << std::endl;
 		std::cout << "Gold Dropped: " << goldDropped << std::endl;
-		std::cout << "Experience Worth: " << experienceWorth << std::endl;
+		std::cout << "Experience Worth: " << experienceWorth << std::endl << std:: endl;
 
 	}
 
@@ -100,55 +118,80 @@ public:
 	};
 
 	void initiateCombat() {
-		while (battling == true)  {
-		
-		std::cin >> input;
+		while (battling)  {
+			if(turnsElapsed % 2 == 0){
+			std::cout 
+				<< std::endl << "1) Attack"
+				<< std::endl << "2) Defend"
+				<< std::endl << "3) Spells"
+				<< std::endl << "4) Items"
+				<< std::endl << "5) Check"
+				<< std::endl << "6) Flee" << std::endl;
 
-		if (std::cin.fail()) {
-			std::cout << "Invalid input! Please enter a valid number." << std::endl;
-			
-			std::cin.clear();
-			return;
-	
-		}
+			std::cin >> input;
 
-		switch (input) {
+			if (std::cin.fail()) {
+				std::cout << "Invalid input! Please enter a valid number." << std::endl;
 
-		case 1: {
+				std::cin.clear();
+				return;
 
-			int baseDamage = player.strength;
-			int damage = baseDamage - opponent.defense;
-			if (damage < 1) damage = 1;
-
-			int critChance = 3 + player.luck;
-			if (critChance > 93) critChance = 93;
-
-			int rolledNumber = rand() % 100;
-			bool criticalHit = (critChance > rolledNumber);
-
-			if (criticalHit) {
-				damage *= 2;
-				std::cout << "Critical Hit! ";
 			}
-		}
-			break;
-		case 2:
-			//defend
-			break;
-		case 3:
-			//open spell menu
-			break;
-		case 4:
-			//open items menu
-			break;
-		case 5:
-			//flee encounter
-			break;
-		default:
-			std::cout << "number out of range, try again";
+
+			switch (input) {
+
+			case 1: 
+
+				int baseDamage = player.strength;
+				int damage = baseDamage - opponent.defense;
+				if (damage < 1) damage = 1;
+
+				double critChance = 3 + player.luck + player.faith / 3;
+				if (critChance > 93) critChance = 93;
+
+				double rolledNumber = rand() % 100;
+				bool criticalHit = (critChance > rolledNumber);
+
+				std::cout << std::endl << "Roll: " << rolledNumber;
+
+				if (criticalHit) {
+					damage *= 2;
+					std::cout << "Critical Hit! ";
+				}
+				opponent.takeDamage(damage);
+				turnsElapsed++;
+			
+				  break;
+			case 2:
+
+				//defend
+				turnsElapsed++;
+				break;
+			case 3:
+
+				//open spell menu
+				break;
+			case 4:
+
+				//open items menu
+				break;
+			case 5:
+
+				opponent.displayStatsTest();
+				player.displayStats();
+				break;
+			case 6:
+
+				//flee encounter
+				turnsElapsed++;
+				break;
+			default:
+				std::cout << "number out of range, try again";
 				break;
 
-
+			
+				}
+			}
 		}
 	}
 
@@ -158,15 +201,11 @@ public:
 
 int main() {
 
-	srand(time(NULL));
+	srand(static_cast<unsigned int>(time(NULL)));
 	enemy test;
 	character test1;
-	
 	test.enemySet(10, 10, 10, 10, 10, 10, "beebie");
-	test.displayStatsTest();
-	test.takeDamage(3);
-	test.displayStatsTest();
 	combatHandler combat1(test1, test);
 	combat1.initiateCombat();
-
+	return 0;
 }
