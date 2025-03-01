@@ -3,10 +3,13 @@
 #include <string>
 #include <Windows.h>
 #include <ctime>
-#include <thread>
+#include <cmath>
 
 int input = 0;
 bool battling = true;
+double rolledNumber;
+int diceRoll;
+int turnsElapsed = 0;
 
 class character {
 
@@ -21,12 +24,15 @@ private:
 	unsigned short faith = 1;
 public:
 	//things the player cannot change
+	int level = 1;
+	int experience = 0;
+	int experienceToNext = 100;
 	int playerHealth = 0;
 	int playerMaxHealth = 0;
-	int defense = 0;
-	int magicDefense = 0;
+	unsigned int defense = 0;
+	unsigned int magicDefense = 0;
 	unsigned short spellsAvailable = 0;
-	
+
 
 	void displayStats() {
 
@@ -41,9 +47,39 @@ public:
 			<< "Dexterity: " << dexterity << std::endl
 			<< "Wisdom: " << wisdom << std::endl
 			<< "Luck: " << luck << std::endl
-			<< "Faith: " << faith << std::endl;
+			<< "Faith: " << faith << std::endl
+			<< "Spells slots available: " << spellsAvailable << std::endl;
 	}
+	void pickAttributes() {
 
+		//first show available points to distribute, also make a constructor that auto assigns stats basically.
+
+
+
+	}
+	void updateCharacterStats(){
+
+		playerMaxHealth = 10 + endurance * 3;
+		defense = 0 + endurance * 2 + strength * 1;
+		magicDefense = faith * 2 + wisdom * 1 + luck * 1;
+		spellsAvailable = (faith / 6 + wisdom / 3); // adds up the two variables and rounds down
+	}
+	void takeDamage(int damage) {
+		std::cout << std::endl << "You took " << damage << " damage!" << std::endl;
+		playerHealth -= damage;
+
+	}
+	character(short stat1, short stat2, short stat3,short stat4, short stat5, short stat6) {
+		endurance = stat1;
+		strength = stat2;
+		dexterity = stat3;
+		wisdom = stat4;
+		luck = stat5;
+		faith = stat6;
+		updateCharacterStats();
+		playerHealth = 10 + endurance * 3;
+
+	};
 	friend class combatHandler;
 };
 
@@ -99,14 +135,46 @@ public:
 
 	}
 
+	void basicEnemyAi(character& player){
+
+		diceRoll = rand() % 4;
+		switch (diceRoll) {
+
+		case 0: {
+			int finalDamage = attack - player.defense;
+			if (finalDamage < 1) finalDamage = 1;
+			player.takeDamage(finalDamage);
+			turnsElapsed++;
+			break;
+		}
+		case 1:
+			//defend
+			std::cout << "Enemy defends, but it doesn't do anything";
+			turnsElapsed++;
+			break;
+		case 2:
+			std::cout << "enemy also does nothing";
+			turnsElapsed++;
+			//do nothing
+			break;
+		case 3:
+			std::cout << "enemy does nothing";
+			//also do nothing
+			turnsElapsed++;
+			break;
+
+		}
+
+	}
+
 };
 
 class combatHandler {
 
 private:
-	int turnsElapsed = 0;
-	int intensity = 0;
-	std::string battleArena = "";
+	
+	int intensity = 0; // I think this will increase as the battle goes on, maybe as a multiplier to all damage done, to avoid battles taking too long.
+	std::string battleArena = ""; // This will likely have some sort of impact, maybe giving status effects. Remember, keep the scope of the project smaller for now.
 	bool playerTurn = true;
 	character& player;
 	enemy& opponent;
@@ -140,8 +208,8 @@ public:
 
 			switch (input) {
 
-			case 1: 
-
+			case 1: {  //these brackets are necessary to avoid errors! idrk why, has to do with scope I think
+				//i might move this code to the player class
 				int baseDamage = player.strength;
 				int damage = baseDamage - opponent.defense;
 				if (damage < 1) damage = 1;
@@ -149,7 +217,7 @@ public:
 				double critChance = 3 + player.luck + player.faith / 3;
 				if (critChance > 93) critChance = 93;
 
-				double rolledNumber = rand() % 100;
+				rolledNumber = rand() % 100;
 				bool criticalHit = (critChance > rolledNumber);
 
 				std::cout << std::endl << "Roll: " << rolledNumber;
@@ -160,8 +228,9 @@ public:
 				}
 				opponent.takeDamage(damage);
 				turnsElapsed++;
-			
-				  break;
+
+				break;
+			}
 			case 2:
 
 				//defend
@@ -191,6 +260,7 @@ public:
 
 			
 				}
+			if (turnsElapsed % 2 == 1) opponent.basicEnemyAi(player);
 			}
 		}
 	}
@@ -203,8 +273,8 @@ int main() {
 
 	srand(static_cast<unsigned int>(time(NULL)));
 	enemy test;
-	character test1;
-	test.enemySet(10, 10, 10, 10, 10, 10, "beebie");
+	character test1(3,3,3,3,3,3);
+	test.enemySet(10, 10, 1, 10, 10, 10, "beebie");
 	combatHandler combat1(test1, test);
 	combat1.initiateCombat();
 	return 0;
