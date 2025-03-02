@@ -7,11 +7,109 @@
 #include <vector>
 #include <limits>
 
+int intensity = 0;
 int input = 0;
 bool battling = true;
 double rolledNumber;
 int diceRoll;
 int turnsElapsed = 0;
+
+void setColor(int color) {
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+}
+
+class items {
+
+private:
+
+	char id = '0'; 
+	std::string itemName = "default";
+	int itemHealingPower = 0;
+	int itemDamage = 0;
+	std::vector<char> itemsHeld;
+	
+	
+public:
+
+	void grantPlayerItem(char itemId) {
+
+
+		itemsHeld.push_back(itemId);
+
+	}
+
+	void updateItem(char itemId) {
+
+
+		switch (itemId) {
+
+
+		case 0:
+
+			
+
+			break;
+		case 1:
+
+		
+
+			break;
+		default:
+			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
+			break;
+
+
+
+		}
+
+
+	} // this holds the data for items
+
+	char displayItemMenu() {
+
+		if (itemsHeld.empty()) {
+
+			std::cout << "You don't have any items. \n";
+			return 'f';
+		}
+		else {
+			int i = 1;
+			std::cout << "-----Items----- \n";
+			for (char itemId : itemsHeld) {
+
+				id = itemId;
+				updateItem(itemId);
+				std::cout << i << ": " << itemName << std::endl;
+				i++;
+
+			}
+			std::cout << "---------------\n";
+			if (battling) {
+
+				std::cout << "Type the number of the item you'd like to use, or anything else to cancel. \n";
+
+				std::cin >> input;
+
+
+				if (std::cin.fail() || input < 1 || input > itemsHeld.size()) {
+					std::cout << "Item use cancelled. \n";
+					std::cin.clear();
+					std::cin.ignore(10000, '\n');
+					return 'f';
+				}
+				return itemsHeld[input - 1];
+
+			}
+
+		}
+
+
+		return 'f';
+
+	};
+
+};
+
 class character {
 
 private:
@@ -87,7 +185,23 @@ public:
 		playerHealth = playerMaxHealth;
 
 	};
+	int calculateMeleeDamage(int enemyDefense) {
+		int baseDamage = static_cast<int>(strength *(1 + intensity * 0.33));
+		int damage = baseDamage - enemyDefense;
+		if (damage < 1) damage = 1;
+		
+		return damage;
+	}
 
+	bool criticalCalculator() {
+
+		double critChance = 3 + luck + faith / 3;  // determine crit chance
+		if (critChance > 93) critChance = 93;
+		rolledNumber = rand() % 100;
+		bool criticalHit = (critChance > rolledNumber);
+		std::cout << std::endl << "Roll: " << rolledNumber;
+		return criticalHit;
+	}
 
 	friend class combatHandler;
 	friend class spells;
@@ -202,26 +316,28 @@ public:
 	}
 	int calculateSpellDamage(character& player) {
 		// this code decides the spell damage based off the scaling types. 0 for wisdom, 1 for faith, 2 for both.
+		player.spellsAvailable -= cost;
 		int finalDamage = 0;
+		
 		switch (scalingAttribute) {
 
 
 		case '0':
-			finalDamage = baseDamage + (player.wisdom * attributeDamageModifier);
-			
+			finalDamage = baseDamage + static_cast<int>((player.wisdom * attributeDamageModifier));
+			finalDamage *= static_cast<int>((1 + intensity * 0.33));
 			return finalDamage;
 			break;
 		case '1':
 
-			finalDamage = baseDamage + (player.faith * attributeDamageModifier);
-
+			finalDamage = baseDamage + static_cast<int>((player.faith * attributeDamageModifier));
+			finalDamage *= static_cast<int>((1 + intensity * 0.33));
 			return finalDamage;
 			break;
 
 		case '2':
 
-			finalDamage = baseDamage + ((player.faith + player.wisdom) * attributeDamageModifier);
-
+			finalDamage = baseDamage + static_cast<int>(((player.faith + player.wisdom) * attributeDamageModifier));
+			finalDamage *= static_cast<int>((1 + intensity * 0.33));
 			return finalDamage;
 			break;
 
@@ -229,15 +345,13 @@ public:
 
 			std::cout << "\n Something went wrong.. \n";
 			return 0;
-			break;
+			
 
 
 
 		}
 	}
 };
-
-
 
 class enemy {
 
@@ -291,13 +405,17 @@ public:
 
 	}
 
+	int enemyGetDefense() {
+		return defense;
+	}
+
 	void basicEnemyAi(character& player){
 		if (battling)  {
 			diceRoll = rand() % 4;
 			switch (diceRoll) {
 
 			case 0: {
-				int finalDamage = attack - player.defense;
+				int finalDamage = (attack + intensity/3) - player.defense;
 				if (finalDamage < 1) finalDamage = 1;
 				player.takeDamage(finalDamage);
 				turnsElapsed++;
@@ -309,7 +427,8 @@ public:
 				turnsElapsed++;
 				break;
 			case 2:
-				std::cout << "enemy also does nothing";
+				std::cout << "The enemy  turns up the heat! Intensity + 3";
+				intensity += 3;
 				turnsElapsed++;
 				//do nothing
 				break;
@@ -329,23 +448,75 @@ class combatHandler {
 
 private:
 	
-	int intensity = 0; // I think this will increase as the battle goes on, maybe as a multiplier to all damage done, to avoid battles taking too long.
 	std::string battleArena = ""; // This will likely have some sort of impact, maybe giving status effects. Remember, keep the scope of the project smaller for now.
 	bool playerTurn = true;
 	character& player;
 	enemy& opponent;
 	spells& spell;
+	items& item;
+
+	bool intensity10 = false;
+	bool intensity20 = false;
+	bool intensity30 = false;
 
 public:
 	
-	combatHandler(character& p, enemy& e, spells& s) : player(p), opponent(e), spell(s) {
+	combatHandler(character& p, enemy& e, spells& s, items& i) : player(p), opponent(e), spell(s), item(i) {
 		std::cout << std::endl << "BATTLE START!" << std::endl;
 	};
 
-	bool fleeLogic() {
-		int fleeValue = rand() % 301 + player.luck * 3 + player.dexterity * 2;
+	void winLogic() {
 
-		if (fleeValue > 100 + (sqrt(player.luck*(player.dexterity+2)) * 4) + intensity*4){
+		if (opponent.enemyHealth <= 0) {
+
+			battling = false;
+			std::cout << "\n you win!";
+		}
+		if (player.playerHealth <= 0) {
+
+			battling = false;
+			std::cout << "\n you lose!";
+		}
+	}
+
+	void displayIntensity() {
+		setColor(6);
+		std::cout << "\nIntensity:" << intensity << std::endl;
+		setColor(7);
+	}
+
+	void displayIntensityFlavorText() {
+
+		if (intensity >= 10 && !intensity10) {
+			setColor(6);
+			std::cout << "\n---The air around you feels warmer---";
+			setColor(7);
+			intensity10 = true;
+		}
+		else if (intensity >= 20 && !intensity20) {
+			setColor(4);
+			std::cout << "\n---The atmosphere grows further hostile, your vision blurs---";
+			setColor(7);
+			intensity20 = true;
+		}
+		else if (intensity >= 30 && !intensity30) {
+			setColor(12);
+			std::cout << "\n---The air is thick with pressure. There is no escape.---";
+			setColor(7);
+			intensity30 = true;
+
+		}
+	}
+
+	bool fleeLogic() {
+		float intensityMultiplier = 1;
+		if (intensity <= 10) intensityMultiplier = 0.6f;
+		else intensityMultiplier = 1;
+		double result = 6.2 * intensity * intensityMultiplier; // result is double
+		int finalIntensity = static_cast<int>(result); // explicit cast to int
+		int fleeValue = rand() % 301 + player.luck * 3 + player.dexterity * 2;
+		int fleeNumberNeeded = static_cast<int>(100 + (sqrt(player.luck * (player.dexterity + 2)) * 4) + finalIntensity);
+		if (fleeValue > fleeNumberNeeded){
 			std::cout << "You fled successfully.\n";
 			battling = false;
 		 return true; 
@@ -361,12 +532,13 @@ public:
 
 	void battlegroundInfo() {
 
-		std::cout << "\nIntensity: " << intensity;
 
 
 	}
 
 	void initiateCombat() {
+		
+
 		while (battling)  {
 			if(turnsElapsed % 2 == 0){
 			std::cout 
@@ -377,8 +549,8 @@ public:
 				<< std::endl << "5) Check"
 				<< std::endl << "6) Flee" << std::endl;
 
-			
-			std::cin >> input; // this actually takes the input, everything below describes what happens.
+
+			std::cin >> input; 
 			
 
 			if (std::cin.fail()) {
@@ -394,24 +566,17 @@ public:
 
 			switch (input) {
 
-			case 1: {  //these brackets are necessary to avoid errors! idrk why, has to do with scope I think
-				//i might move this code to the player class
-				int baseDamage = player.strength;
-				int damage = baseDamage - opponent.defense;
-				if (damage < 1) damage = 1;
-
-				double critChance = 3 + player.luck + player.faith / 3;
-				if (critChance > 93) critChance = 93;
-
-				rolledNumber = rand() % 100;
-				bool criticalHit = (critChance > rolledNumber);
-
-				std::cout << std::endl << "Roll: " << rolledNumber;
+			case 1: {  //keep these brackets
+				
+				int damage = player.calculateMeleeDamage(opponent.defense);
+				
+				bool criticalHit = player.criticalCalculator();
 
 				if (criticalHit) {
 					damage *= 2;
 					std::cout << "Critical Hit! ";
 				}
+
 				opponent.takeDamage(damage);
 				intensity++;
 				turnsElapsed++;
@@ -419,7 +584,7 @@ public:
 				break;
 			}
 			case 2:
-				std::cout << " \n You brace for impact.. \n";
+				std::cout << " \nYou brace for impact.. \n";
 				player.temporaryDefense = player.defense;
 				player.defense += player.defense / 3;
 				intensity++;
@@ -434,7 +599,7 @@ public:
 				if (spell.cost <= player.spellsAvailable) {
 					int spellDamage = spell.calculateSpellDamage(player);
 					opponent.takeDamage(spellDamage);
-					player.spellsAvailable -= spell.cost; 
+					
 					intensity++;
 					turnsElapsed++;
 				}
@@ -448,7 +613,7 @@ public:
 			}
 			case 4:
 
-				//open items menu
+				item.displayItemMenu();
 				break;
 			case 5:
 
@@ -468,37 +633,36 @@ public:
 
 			
 				}
-			if (opponent.enemyHealth <= 0) {
+			
+			winLogic();
 
-				battling = false;
-				std::cout << "\n you win!";
-			}
 			if (turnsElapsed % 2 == 1) opponent.basicEnemyAi(player);
 			}
 
-			if (player.playerHealth <= 0) {
+			winLogic();
 
-				battling = false;
-				std::cout << "\n you lose!";
-			}
 			player.defense = player.temporaryDefense; //reset defense if you defended
+
+			displayIntensity();
+
+			displayIntensityFlavorText();
 			
+			}
 		}
-	}
+	};
 
 
-
-};
 
 int main() {
 
 	srand(static_cast<unsigned int>(time(NULL)));
 	enemy test;
+	items testitem;
 	spells spelltest;
 	spelltest.grantPlayerSpell(0);
 	character test1(3,3,3,3,3,3);
 	test.enemySet(10, 10, 1, 12, 10, 10, "beebie");
-	combatHandler combat1(test1, test, spelltest);
+	combatHandler combat1(test1, test, spelltest, testitem);
 	combat1.initiateCombat();
 	return 0;
 }
