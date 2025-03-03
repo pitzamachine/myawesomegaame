@@ -13,6 +13,17 @@ bool battling = true;
 double rolledNumber;
 int diceRoll;
 int turnsElapsed = 0;
+int roundsPassed = 0;
+
+bool handleInputFailure(const std::string& errorMessage) {
+	if (std::cin.fail()) {
+		std::cout << errorMessage << std::endl;
+		std::cin.clear();
+		std::cin.ignore(10000, '\n');
+		return true; // Indicates failure occurred
+	}
+	return false; // No failure
+}
 
 void setColor(int color) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
@@ -26,6 +37,11 @@ private:
 	std::string itemName = "default";
 	int itemHealingPower = 0;
 	int itemDamage = 0;
+	char scalingType = '0'; // 0 static , 1 intensity, 2 atribute scaling, 3 for both
+	float intensityScaleFactor = 0.0f; //item intensity scaling
+	std::string attributeScale = "Strength"; //replace with scaling attribute
+	float attributeScalingFactor = 0.0f;  //item attribute scaling
+	int itemCost = 0;
 	std::vector<char> itemsHeld;
 	
 	
@@ -45,13 +61,65 @@ public:
 
 
 		case 0:
-
-			
-
+			itemName = "Rock";
+			itemDamage = 12;
+			scalingType = 1;
+			intensityScaleFactor = 0.05f;
+			itemHealingPower = 0;
+			itemCost = 3;
 			break;
 		case 1:
+			itemName = "Throwing Dagger";
+			itemDamage = 7;
+			scalingType = 2;
+			attributeScalingFactor = 0.16f;
+			attributeScale = "Dexterity";
+			itemHealingPower = 0;
+			itemCost = 5;
 
-		
+			break;
+		case 2:
+			itemName = "Dynamite";
+			itemDamage = 50;
+			scalingType = 0;
+			itemCost = 10;
+			itemHealingPower = 0;
+			break;
+		case 3:
+			itemName = "Dynamite+";
+			itemDamage = 65;
+			scalingType = 1;
+			intensityScaleFactor = 0.04f;
+			itemHealingPower = 0;
+			itemCost = 20;
+
+
+			break;
+		case 4:
+			itemName = "Healing Potion-";
+			itemHealingPower = 15;
+			itemCost = 6;
+			scalingType = 0;
+			itemDamage = 0;
+
+			break;
+
+		case 5:
+			itemName = "Healing Potion";
+			itemHealingPower = 35;
+			itemCost = 10;
+			scalingType = 0;
+			itemDamage = 0;
+
+			break;
+
+		case 6:
+
+			itemName = "Healing Potion+";
+			itemHealingPower = 65;
+			itemCost = 18;
+			scalingType = 0;
+			itemDamage = 0;
 
 			break;
 		default:
@@ -108,6 +176,30 @@ public:
 
 	};
 
+	int useItem(int itemUsed) {
+
+		int finalDamage = 0;
+		int healingApplied = itemHealingPower;
+
+		switch (scalingType) {
+		case '0': {
+			finalDamage = itemDamage;
+			break;
+		}
+		case '1':
+
+		case '2':
+
+		case '3':
+
+		default:
+			break;
+
+
+		}
+		return finalDamage;
+	}
+
 };
 
 class character {
@@ -123,10 +215,11 @@ private:
 	unsigned short faith = 1;
 public:
 	//things the player cannot change, and or can be changed by external things
+	int attributePoints = 15;
 	int level = 1;
 	int gold = 0;
 	int experience = 0;
-	int experienceToNext = 100;
+	int experienceToNext = 40;
 	int playerHealth = 0;
 	int playerMaxHealth = 0;
 	unsigned int defense = 0;
@@ -154,11 +247,93 @@ public:
 			<< "Spell slots available: " << spellsAvailable << std::endl;
 	}
 	void pickAttributes() {
+		int attributeAssigner = 0;
+		int pointsToAssign = 0;
+		while (attributePoints > 0) {
+			std::cout << "Distribute your attribute points by typing 1 through 6, you have " << attributePoints << " left \n";
+			std::cout << "1) Endurance: " << endurance << std::endl
+				<< "2) Strength: " << strength << std::endl
+				<< "3) Dexterity: " << dexterity << std::endl
+				<< "4) Wisdom: " << wisdom << std::endl
+				<< "5) Luck: " << luck << std::endl
+				<< "6) Faith: " << faith << std::endl;
 
-		//first show available points to distribute, also make a constructor that auto assigns stats basically.
+
+			std::cin >> attributeAssigner;
+
+			if (handleInputFailure("\nInvalid input! Please enter a valid number between 1 and 6.")){
+				continue;
+		}
+			if (attributeAssigner < 1 || attributeAssigner > 6) {
+				std::cout << "Number out of range, try again.\n";
+				continue;
+			}
+
+			std::cout << "How many points would you like to assign? (Remaining: " << attributePoints << ")\n";
+			std::cin >> pointsToAssign;
+
+			if (handleInputFailure("\nInvalid input! Please enter a valid number.")) {
+				continue;
+			}
+			if (attributePoints < pointsToAssign || pointsToAssign <= 0) {
+				std::cout << "You can't assign that many points.\n";
+				continue;
+			}
+
+			switch (attributeAssigner) {
+
+			case 1: {  //keep these brackets
+
+				endurance += pointsToAssign;
+				attributePoints -= pointsToAssign;
+				std::cout << pointsToAssign << " points assigned to Endurance. New value: " << endurance << "\n";
+				break;
+			}
+			case 2:
+				strength += pointsToAssign;
+				attributePoints -= pointsToAssign;
+				std::cout << pointsToAssign << " points assigned to Strength. New value: " << strength << "\n";
+
+				break;
+			case 3:
+			{
+				dexterity += pointsToAssign;
+				attributePoints -= pointsToAssign;
+				std::cout << pointsToAssign << " points assigned to dexterity. New value: " << dexterity << "\n";
 
 
+				break;
+			}
+			case 4:
+			{
+				wisdom += pointsToAssign;
+				attributePoints -= pointsToAssign;
+				std::cout << pointsToAssign << " points assigned to wisdom. New value: " << wisdom << "\n";
 
+				break;
+			}
+			case 5:
+				luck += pointsToAssign;
+				attributePoints -= pointsToAssign;
+				std::cout << pointsToAssign << " points assigned to Luck. New value: " << luck << "\n";
+				
+				break;
+			case 6:
+
+				faith += pointsToAssign;
+				attributePoints -= pointsToAssign;
+				std::cout << pointsToAssign << " points assigned to Faith. New value: " << faith << "\n";
+				break;
+			default:
+				std::cout << "Number out of range, try again \n";
+				break;
+
+
+			}
+			updateCharacterStats();
+			playerHealth = playerMaxHealth;
+		}
+		std::cout << "Attribute points assigned.\n";
 	}
 	void updateCharacterStats() {
 
@@ -464,6 +639,33 @@ public:
 	combatHandler(character& p, enemy& e, spells& s, items& i) : player(p), opponent(e), spell(s), item(i) {
 		std::cout << std::endl << "BATTLE START!" << std::endl;
 	};
+	void battleRewards() {
+		if (!battling && opponent.enemyHealth <= 0) {
+			player.experience += opponent.experienceWorth;
+			player.gold += opponent.goldDropped;
+			setColor(6);
+			std::cout << "\nYou gained " << opponent.goldDropped << " gold and " << opponent.experienceWorth << " experience!\n";
+			setColor(7);
+		}
+
+
+	}
+	
+	void levelUpHandler() {
+		int originalLevel = player.level;
+		while (player.experience >= player.experienceToNext) {
+			setColor(2);
+			std::cout << "You leveled up to level " << player.level << ".\n";
+			setColor(7);
+			player.experience -= player.experienceToNext;
+			player.level++;
+			player.experienceToNext *= 1.33;
+			player.attributePoints += 3;
+
+		}
+		if(player.level > originalLevel)
+			player.pickAttributes();
+	}
 
 	void winLogic() {
 
@@ -612,9 +814,12 @@ public:
 				break;
 			}
 			case 4:
-
-				item.displayItemMenu();
+			{
+				int itemUsed = item.displayItemMenu();
+				item.useItem(itemUsed);
+				
 				break;
+			}
 			case 5:
 
 				opponent.displayStatsTest();
@@ -640,12 +845,16 @@ public:
 			}
 
 			winLogic();
+			battleRewards();
+			levelUpHandler();
 
 			player.defense = player.temporaryDefense; //reset defense if you defended
+			
+			if(battling)		{
+				displayIntensity();
+				displayIntensityFlavorText();
+			}
 
-			displayIntensity();
-
-			displayIntensityFlavorText();
 			
 			}
 		}
@@ -659,9 +868,11 @@ int main() {
 	enemy test;
 	items testitem;
 	spells spelltest;
+	testitem.grantPlayerItem(2);
 	spelltest.grantPlayerSpell(0);
-	character test1(3,3,3,3,3,3);
-	test.enemySet(10, 10, 1, 12, 10, 10, "beebie");
+	character test1(0,0,0,0,0,0);
+	test1.pickAttributes();
+	test.enemySet(20, 20, 1, 12, 10, 1700, "beebie");
 	combatHandler combat1(test1, test, spelltest, testitem);
 	combat1.initiateCombat();
 	return 0;
