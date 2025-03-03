@@ -361,7 +361,7 @@ public:
 
 	};
 	int calculateMeleeDamage(int enemyDefense) {
-		int baseDamage = static_cast<int>(strength *(1 + intensity * 0.33));
+		int baseDamage = static_cast<int>(strength *(1 + intensity * 0.1));
 		int damage = baseDamage - enemyDefense;
 		if (damage < 1) damage = 1;
 		
@@ -499,20 +499,20 @@ public:
 
 		case '0':
 			finalDamage = baseDamage + static_cast<int>((player.wisdom * attributeDamageModifier));
-			finalDamage *= static_cast<int>((1 + intensity * 0.33));
+			finalDamage *= static_cast<int>((1 + intensity * 0.1));
 			return finalDamage;
 			break;
 		case '1':
 
 			finalDamage = baseDamage + static_cast<int>((player.faith * attributeDamageModifier));
-			finalDamage *= static_cast<int>((1 + intensity * 0.33));
+			finalDamage *= static_cast<int>((1 + intensity * 0.1));
 			return finalDamage;
 			break;
 
 		case '2':
 
 			finalDamage = baseDamage + static_cast<int>(((player.faith + player.wisdom) * attributeDamageModifier));
-			finalDamage *= static_cast<int>((1 + intensity * 0.33));
+			finalDamage *= static_cast<int>((1 + intensity * 0.1));
 			return finalDamage;
 			break;
 
@@ -550,15 +550,15 @@ public:
 		
 	}
 
-	void enemySet(int a, int b, int c, int d, int e, int f, std:: string g) {
+	void enemySet(int enemyMaxHp, int enemyHp, int edefense, int eattack, int gold, int exp, std:: string ename) {
 
-		enemyMaxHealth = a;
-		 enemyHealth = b;
-		 defense = c;
-		 attack = d;
-		 goldDropped = e;
-		 experienceWorth = f;
-		name = g;
+		enemyMaxHealth = enemyMaxHp;
+		 enemyHealth = enemyHp;
+		 defense = edefense;
+		 attack = eattack;
+		 goldDropped = gold;
+		 experienceWorth = exp;
+		name = ename;
 
 	};
 
@@ -590,7 +590,7 @@ public:
 			switch (diceRoll) {
 
 			case 0: {
-				int finalDamage = (attack + intensity/3) - player.defense;
+				int finalDamage = (attack * (1 + intensity/8)) - player.defense;
 				if (finalDamage < 1) finalDamage = 1;
 				player.takeDamage(finalDamage);
 				turnsElapsed++;
@@ -738,11 +738,33 @@ public:
 
 	}
 
+	void enemyRandomizer() {
+		int randomHealth = 0;
+		int randomAttack = 0;
+		int randomDefense = 0;
+		int randomXP = 0;
+		int randomGold = 0;
+		std::string randomName = "Alfred";
+
+		randomHealth = rand() % 30 + player.level * 4;
+		randomAttack = rand() % 7 + player.level * 6;
+		randomDefense = rand() % 13 + player.level * 3;
+		randomXP = rand() % 30 + player.level * 10;
+		randomGold = rand() % 12 + player.level * 3;
+		randomName = "alfred" + rand() % 200;
+
+		opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack, randomGold, randomXP, randomName);
+		
+	};
+
 	void initiateCombat() {
 		
-
+		std::cout << "\nBattle Start\n";
 		while (battling)  {
+
 			if(turnsElapsed % 2 == 0){
+
+				
 			std::cout 
 				<< std::endl << "1) Attack"
 				<< std::endl << "2) Defend"
@@ -857,7 +879,9 @@ public:
 
 			
 			}
+			enemyRandomizer();
 		}
+			
 	};
 
 
@@ -868,12 +892,18 @@ int main() {
 	enemy test;
 	items testitem;
 	spells spelltest;
-	testitem.grantPlayerItem(2);
 	spelltest.grantPlayerSpell(0);
 	character test1(0,0,0,0,0,0);
 	test1.pickAttributes();
-	test.enemySet(20, 20, 1, 12, 10, 1700, "beebie");
+	test.enemySet(20, 20, 1, 12, 10, 20, "beebie");
 	combatHandler combat1(test1, test, spelltest, testitem);
-	combat1.initiateCombat();
+	while (test1.playerHealth > 0) {
+		battling = true;
+		intensity = 0;
+		turnsElapsed = 0;
+		combat1.initiateCombat();
+
+	}
+	
 	return 0;
 }
