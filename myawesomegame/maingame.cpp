@@ -14,6 +14,11 @@ double rolledNumber;
 int diceRoll;
 int turnsElapsed = 0;
 int roundsPassed = 0;
+float calcDamageVariance() {
+
+	return 0.9f + (rand() % 21) / 100;
+
+}
 
 bool handleInputFailure(const std::string& errorMessage) {
 	if (std::cin.fail()) {
@@ -29,178 +34,7 @@ void setColor(int color) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 }
 
-class items {
 
-private:
-
-	char id = '0'; 
-	std::string itemName = "default";
-	int itemHealingPower = 0;
-	int itemDamage = 0;
-	char scalingType = '0'; // 0 static , 1 intensity, 2 atribute scaling, 3 for both
-	float intensityScaleFactor = 0.0f; //item intensity scaling
-	std::string attributeScale = "Strength"; //replace with scaling attribute
-	float attributeScalingFactor = 0.0f;  //item attribute scaling
-	int itemCost = 0;
-	std::vector<char> itemsHeld;
-	
-	
-public:
-
-	void grantPlayerItem(char itemId) {
-
-
-		itemsHeld.push_back(itemId);
-
-	}
-
-	void updateItem(char itemId) {
-
-
-		switch (itemId) {
-
-
-		case 0:
-			itemName = "Rock";
-			itemDamage = 12;
-			scalingType = 1;
-			intensityScaleFactor = 0.05f;
-			itemHealingPower = 0;
-			itemCost = 3;
-			break;
-		case 1:
-			itemName = "Throwing Dagger";
-			itemDamage = 7;
-			scalingType = 2;
-			attributeScalingFactor = 0.16f;
-			attributeScale = "Dexterity";
-			itemHealingPower = 0;
-			itemCost = 5;
-
-			break;
-		case 2:
-			itemName = "Dynamite";
-			itemDamage = 50;
-			scalingType = 0;
-			itemCost = 10;
-			itemHealingPower = 0;
-			break;
-		case 3:
-			itemName = "Dynamite+";
-			itemDamage = 65;
-			scalingType = 1;
-			intensityScaleFactor = 0.04f;
-			itemHealingPower = 0;
-			itemCost = 20;
-
-
-			break;
-		case 4:
-			itemName = "Healing Potion-";
-			itemHealingPower = 15;
-			itemCost = 6;
-			scalingType = 0;
-			itemDamage = 0;
-
-			break;
-
-		case 5:
-			itemName = "Healing Potion";
-			itemHealingPower = 35;
-			itemCost = 10;
-			scalingType = 0;
-			itemDamage = 0;
-
-			break;
-
-		case 6:
-
-			itemName = "Healing Potion+";
-			itemHealingPower = 65;
-			itemCost = 18;
-			scalingType = 0;
-			itemDamage = 0;
-
-			break;
-		default:
-			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
-			break;
-
-
-
-		}
-
-
-	} // this holds the data for items
-
-	char displayItemMenu() {
-
-		if (itemsHeld.empty()) {
-
-			std::cout << "You don't have any items. \n";
-			return 'f';
-		}
-		else {
-			int i = 1;
-			std::cout << "-----Items----- \n";
-			for (char itemId : itemsHeld) {
-
-				id = itemId;
-				updateItem(itemId);
-				std::cout << i << ": " << itemName << std::endl;
-				i++;
-
-			}
-			std::cout << "---------------\n";
-			if (battling) {
-
-				std::cout << "Type the number of the item you'd like to use, or anything else to cancel. \n";
-
-				std::cin >> input;
-
-
-				if (std::cin.fail() || input < 1 || input > itemsHeld.size()) {
-					std::cout << "Item use cancelled. \n";
-					std::cin.clear();
-					std::cin.ignore(10000, '\n');
-					return 'f';
-				}
-				return itemsHeld[input - 1];
-
-			}
-
-		}
-
-
-		return 'f';
-
-	};
-
-	int useItem(int itemUsed) {
-
-		int finalDamage = 0;
-		int healingApplied = itemHealingPower;
-
-		switch (scalingType) {
-		case '0': {
-			finalDamage = itemDamage;
-			break;
-		}
-		case '1':
-
-		case '2':
-
-		case '3':
-
-		default:
-			break;
-
-
-		}
-		return finalDamage;
-	}
-
-};
 
 class character {
 
@@ -361,8 +195,8 @@ public:
 
 	};
 	int calculateMeleeDamage(int enemyDefense) {
-		int baseDamage = static_cast<int>(strength *(1 + intensity * 0.1));
-		int damage = baseDamage - enemyDefense;
+		int baseDamage = static_cast<int>((strength *(1 + intensity * 0.1))-static_cast<float>(enemyDefense/2));		
+		int damage = baseDamage * calcDamageVariance();
 		if (damage < 1) damage = 1;
 		
 		return damage;
@@ -380,6 +214,7 @@ public:
 
 	friend class combatHandler;
 	friend class spells;
+	friend class items;
 };
 
 class spells {
@@ -544,6 +379,8 @@ public:
 
 	friend class combatHandler;
 
+	friend class items;
+
 	enemy(){
 		
 		std::cout << "enemy encountered" << std::endl;
@@ -568,6 +405,15 @@ public:
 
 	}
 
+	float enemyCalculateMeleeDamage(character& player) {
+
+		float baseDamage = (attack * (1 + static_cast<float>(intensity) / 8)) - player.defense/2;
+		float variance = 0.9f + (rand() % 21) / 100.0;
+		int finalDamage = static_cast<int>(baseDamage * variance);
+		if (finalDamage< 1) finalDamage = 1;
+		return finalDamage;
+	}; 
+
 	void displayStatsTest() {
 
 		std::cout << "Enemy Name: " << name << std::endl;
@@ -590,9 +436,8 @@ public:
 			switch (diceRoll) {
 
 			case 0: {
-				int finalDamage = (attack * (1 + intensity/8)) - player.defense;
-				if (finalDamage < 1) finalDamage = 1;
-				player.takeDamage(finalDamage);
+				
+				player.takeDamage(enemyCalculateMeleeDamage(player));
 				turnsElapsed++;
 				break;
 			}
@@ -613,6 +458,165 @@ public:
 				turnsElapsed++;
 				break;
 			}
+		}
+
+	}
+
+};
+
+class items {
+
+private:
+
+	char id = '0';
+	std::string itemName = "default";
+	int itemHealingPower = 0;
+	int itemDamage = 0;
+	std::string scalingType = "static"; //  static, intensity, attribute, both
+	float intensityScaleFactor = 0.0f; //item intensity scaling
+	std::string attributeScale = "Strength"; //replace with scaling attribute
+	float attributeScalingFactor = 0.0f;  //item attribute scaling
+	std::string itemType = "healing"; // damage, healing, buff, debuff
+	int itemCost = 0;
+	std::vector<char> itemsHeld;
+
+
+public:
+
+	void grantPlayerItem(char itemId) {
+
+
+		itemsHeld.push_back(itemId);
+
+	}
+
+	void updateItem(char itemId) {
+
+
+		switch (itemId) {
+
+
+		case 0:
+			itemName = "Rock";
+			itemDamage = 12;
+			scalingType = "intensity";
+			intensityScaleFactor = 0.05f;
+			itemHealingPower = 0;
+			itemCost = 3;
+			break;
+		case 1:
+			itemName = "Throwing Dagger";
+			itemDamage = 7;
+			scalingType = "attribute";
+			attributeScalingFactor = 0.16f;
+			attributeScale = "dexterity";
+			itemHealingPower = 0;
+			itemCost = 5;
+
+			break;
+		case 2:
+			itemName = "Dynamite";
+			itemDamage = 50;
+			scalingType = "static";
+			itemCost = 10;
+			itemHealingPower = 0;
+			break;
+		case 3:
+			itemName = "Dynamite+";
+			itemDamage = 65;
+			scalingType = "intensity";
+			intensityScaleFactor = 0.04f;
+			itemHealingPower = 0;
+			itemCost = 20;
+
+			break;
+		case 4:
+			itemName = "Healing Potion-";
+			itemHealingPower = 15;
+			itemCost = 6;
+			scalingType = "static";
+			itemType = "healing";
+			itemDamage = 0;
+
+			break;
+
+		case 5:
+			itemName = "Healing Potion";
+			itemHealingPower = 35;
+			itemCost = 10;
+			scalingType = "static";
+			itemType = "healing";
+			itemDamage = 0;
+
+			break;
+
+		case 6:
+
+			itemName = "Healing Potion+";
+			itemHealingPower = 65;
+			itemCost = 18;
+			scalingType = "static";
+			itemType = "healing";
+			itemDamage = 0;
+
+			break;
+		default:
+			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
+			break;
+
+
+
+		}
+
+
+	} // this holds the data for items
+
+	char displayItemMenu(character& player, enemy& opponent) {
+
+		if (itemsHeld.empty()) {
+			std::cout << "You don't have any items. \n";
+			return 'f';
+		}
+		else {
+			int i = 1;
+			std::cout << "-----Items----- \n";
+			for (char itemId : itemsHeld) {
+				id = itemId;
+				updateItem(itemId);
+				std::cout << i << ": " << itemName << std::endl;
+				i++;
+			}
+			std::cout << "---------------\n";
+
+			if (battling) {
+				std::cout << "Type the number of the item you'd like to use, or anything else to cancel. \n";
+
+				int input;
+				std::cin >> input;
+
+				if (std::cin.fail() || input < 1 || input > itemsHeld.size()) {
+					std::cout << "Item use cancelled. \n";
+					std::cin.clear();
+					std::cin.ignore(10000, '\n');
+					return 'f';
+				}
+
+				char usedItem = itemsHeld[input - 1];
+				itemsHeld.erase(itemsHeld.begin() + (input - 1));
+				useItem(usedItem, player, opponent);
+				
+			}
+		}
+
+		return 'f';
+	};
+
+	void useItem(char itemUsed, character& player, enemy& opponent) {
+		updateItem(itemUsed);
+		if (itemType == "healing" && player.playerHealth < player.playerMaxHealth) {
+			player.playerHealth += itemHealingPower; // you should replace this with a player.heal function
+			if (player.playerHealth > player.playerMaxHealth) player.playerHealth = player.playerMaxHealth;
+
 		}
 
 	}
@@ -837,8 +841,8 @@ public:
 			}
 			case 4:
 			{
-				int itemUsed = item.displayItemMenu();
-				item.useItem(itemUsed);
+				char itemUsed = item.displayItemMenu(player, opponent);
+				
 				
 				break;
 			}
@@ -892,6 +896,7 @@ int main() {
 	enemy test;
 	items testitem;
 	spells spelltest;
+	testitem.grantPlayerItem(4);
 	spelltest.grantPlayerSpell(0);
 	character test1(0,0,0,0,0,0);
 	test1.pickAttributes();
@@ -905,5 +910,5 @@ int main() {
 
 	}
 	
-	return 0;
+	
 }
