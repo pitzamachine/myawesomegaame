@@ -13,8 +13,31 @@ int input = 0;
 bool battling = true;
 double rolledNumber;
 int diceRoll;
+int enemyRoll;
 int turnsElapsed = 0;
 int roundsPassed = 0;
+//this is where i'll store the enemy stats, for easy editing
+struct EnemyStats {
+
+	int maxHealth;
+	int defense;
+	int attack;
+	unsigned short goldDropped = 0;
+	unsigned short exp;
+	char aiType;
+	unsigned short minLevel = 0;
+
+};
+
+const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
+
+	{"Snow Golem", {40, 12, 6, 10, 30, '1', 2}},
+	{"Little Golem", {30, 10, 6, 8, 30, '1', 1}},
+	{"Soul Sucker",{25, 8, 10, 16, 60, '2', 4}},
+	{"Living Armor", {80, 14, 6, 30, 100,'1', 5}},
+	{"Fear Monger", {90,12,12,40, 150,'3', 6}}
+};
+// end of enemy stats
 float calcDamageVariance() {
 
 	return 0.9f + (rand() % 21) / 100;
@@ -400,6 +423,8 @@ private:
 	int enemyHealth = 0;
 	int defense = 0;
 	int attack = 0;
+	int minLevel = 0;
+	int tempDefense = 0;
 	unsigned short goldDropped = 0;
 	unsigned short experienceWorth = 0;
 	std::string name = " ";
@@ -407,20 +432,11 @@ private:
 
 public:
 
-	struct EnemyStats {
-
-		int maxHealth;
-		int defense;
-		int attack;
-		unsigned short goldDropped = 0;
-		unsigned short exp;
-		char aiType;
-	};
-
-
 	friend class combatHandler;
 
 	friend class items;
+
+	friend class character;
 
 	enemy(){
 		
@@ -428,15 +444,39 @@ public:
 		
 	}
 
-	void enemySet(int enemyMaxHp, int enemyHp, int edefense, int eattack, int gold, int exp, std:: string ename) {
+	void enemySet(int enemyMaxHp, int enemyHp, int edefense, int eattack, int gold, int exp, std:: string ename, character& player) {
+		enemyRoll = rand() % 6;
+		if (enemyRoll == 3) {
+			auto it = EnemyStatsMap.begin();
+			std::advance(it, rand() % EnemyStatsMap.size());
+			const EnemyStats& stats = it->second;
+			minLevel = it->second.minLevel;
+			if (player.level < minLevel){
+				name = it->first;
+				enemyMaxHealth = it->second.maxHealth;
+				enemyHealth = it->second.maxHealth;
+				defense = it->second.defense;
+				attack = it->second.attack;
+				goldDropped = it->second.goldDropped;
+				experienceWorth = it->second.exp;
+				aiType = it->second.aiType;
+				tempDefense = defense;
+			}
+		
+		}
+		else {
+			enemyMaxHealth = enemyMaxHp;
+			enemyHealth = enemyHp;
+			defense = edefense;
+			attack = eattack;
+			goldDropped = gold;
+			experienceWorth = exp;
+			name = ename;
 
-		enemyMaxHealth = enemyMaxHp;
-		 enemyHealth = enemyHp;
-		 defense = edefense;
-		 attack = eattack;
-		 goldDropped = gold;
-		 experienceWorth = exp;
-		name = ename;
+		}
+
+
+	
 
 	};
 
@@ -484,17 +524,19 @@ public:
 			}
 			case 1:
 				//defend
-				std::cout << "Enemy defends, but it doesn't do anything";
+				std::cout << "\nEnemy defends, you'll do less melee damage ";
+				tempDefense = defense;
+				defense = defense * 1.33;
 				turnsElapsed++;
 				break;
 			case 2:
-				std::cout << "The enemy  turns up the heat! Intensity + 3";
+				std::cout << "\nThe enemy  turns up the heat! Intensity + 3";
 				intensity += 3;
 				turnsElapsed++;
 				//do nothing
 				break;
 			case 3:
-				std::cout << "enemy does nothing";
+				std::cout << "\nenemy does nothing";
 				//also do nothing
 				turnsElapsed++;
 				break;
@@ -1234,14 +1276,17 @@ public:
 		randomGold = rand() % 8 + player.level * 2;
 		randomName = "alfred " + std::to_string(rand() % 200);
 
-		opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack, randomGold, randomXP, randomName);
+		opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack, randomGold, randomXP, randomName,player);
 		
 	};
 
 	void initiateCombat() {
 		
 		std::cout << "\nBattle Start\n";
+		if (enemyRoll == 3)std::cout << "\n Special Encounter: " << opponent.name << ".";
 		while (battling)  {
+
+			
 
 			if(turnsElapsed % 2 == 0){
 
@@ -1346,6 +1391,7 @@ public:
 			
 				}
 			
+			opponent.defense = opponent.tempDefense; //also reset enemy defense
 			winLogic();
 
 			if (turnsElapsed % 2 == 1) opponent.basicEnemyAi(player);
@@ -1357,6 +1403,7 @@ public:
 
 			player.defense = player.temporaryDefense; //reset defense if you defended
 			
+
 			if(battling)		{
 				displayIntensity();
 				displayIntensityFlavorText();
@@ -1364,11 +1411,14 @@ public:
 
 			
 			}
+
 			enemyRandomizer();
 			
 		}
 			
 	};
+
+
 
 int main() {
 
@@ -1384,7 +1434,7 @@ int main() {
 		std::cout << "\nYour dexterity grants you a free throwing dagger.\n";
 
 	}
-	test.enemySet(20, 20, 1, 4, 10, 20, "beebie");
+	test.enemySet(20, 20, 1, 4, 10, 20, "beebie", test1);
 	combatHandler combat1(test1, test, spelltest, testitem, shoptest);
 	while (test1.playerHealth > 0) {
 		battling = true;
