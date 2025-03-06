@@ -403,8 +403,20 @@ private:
 	unsigned short goldDropped = 0;
 	unsigned short experienceWorth = 0;
 	std::string name = " ";
+	char aiType = '0';
 
 public:
+
+	struct EnemyStats {
+
+		int maxHealth;
+		int defense;
+		int attack;
+		unsigned short goldDropped = 0;
+		unsigned short exp;
+		char aiType;
+	};
+
 
 	friend class combatHandler;
 
@@ -846,7 +858,7 @@ public:
 
 			opponent.takeDamage(finalItemDamage);
 			if (id == 1 || id == 8 || id == 14) {
-			label_name:
+			label_name: //i've never used go to, but I was too lazy to make a while loop. Have fun throwing a ton of daggers.
 
 				float multiDaggerChance = player.dexterity / 2.5;
 				if (multiDaggerChance > 20) multiDaggerChance = 20;
