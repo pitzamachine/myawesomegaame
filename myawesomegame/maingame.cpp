@@ -1484,7 +1484,8 @@ int main() {
 	test1.pickAttributes();
 	if (test1.getDexterity() >= 5) {
 		testitem.grantPlayerItem(1); 
-		std::cout << "\nYour dexterity grants you a free throwing dagger.\n";
+		testitem.grantPlayerItem(1);
+		std::cout << "\nYour dexterity grants you 2 free throwing daggers.\n";
 
 	}
 	if (test1.getFaith() >= 6) {
