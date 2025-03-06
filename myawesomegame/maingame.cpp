@@ -88,6 +88,9 @@ public:
 	int getDexterity() {
 		return dexterity;
 	}
+	int getFaith() {
+		return faith;
+	}
 	void displayStats() {
 
 		std::cout << "Player Name: " << name << std::endl
@@ -249,9 +252,10 @@ class spells {
 public:
 	char id = '0';
 	int baseDamage = 0;
-	float attributeDamageModifier = 0; 
+	float attributePowerModifier = 0; 
 	short spellSlotCost = 0;
 	short spellPrice = 0;
+	int baseHealing = 0;
 	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both, 3 is neither
 	std::string spellName = "default";
 	std::vector<char> spellsKnown;
@@ -261,7 +265,7 @@ public:
 
 		id = 0;
 		baseDamage = 3;
-		attributeDamageModifier = 1.2f;
+		attributePowerModifier = 1.2f;
 		spellName = "Zaqp";
 		scalingAttribute = '0';
 
@@ -324,18 +328,18 @@ public:
 
 
 		case 0:
-			
+			baseHealing = 0;
 			baseDamage = 3;
-			attributeDamageModifier = 1.55f;
+			attributePowerModifier = 1.55f;
 			spellName = "Zap";
 			scalingAttribute = '0';
 			spellSlotCost = 1;
 			spellPrice = 20;
 			break;
 		case 1:
-			
+			baseHealing = 0;
 			baseDamage = 6;
-			attributeDamageModifier = 1.4f;
+			attributePowerModifier = 1.4f;
 			spellName = "Light Ray";
 			scalingAttribute = '1';
 			spellSlotCost = 1;
@@ -344,10 +348,10 @@ public:
 			break;
 
 		case 2:
-
+			baseHealing = 0;
 			baseDamage = 15;
 			spellName = "Hailstorm";
-			attributeDamageModifier = 1.4f;
+			attributePowerModifier = 1.4f;
 			scalingAttribute = '2'; // both
 			spellSlotCost = 2;
 			spellPrice = 40;
@@ -355,13 +359,24 @@ public:
 			break;
 
 		case 3:
-
+			baseHealing = 0;
 			baseDamage = 22;
 			spellName = "Fireball";
-			attributeDamageModifier = 0.8f;
+			attributePowerModifier = 0.8f;
 			scalingAttribute = '0'; // wisdom
 			spellSlotCost = 2;
 			spellPrice = 40;
+
+			break;
+
+		case 4:
+			baseHealing = 6;
+			baseDamage = 0;
+			spellName = "Minor Heal";
+			attributePowerModifier = 0.8f;
+			scalingAttribute = '1'; // faith
+			spellSlotCost = 1;
+			spellPrice = 35;
 
 			break;
 
@@ -376,29 +391,67 @@ public:
 
 
 	}
-	int calculateSpellDamage(character& player) {
-		// this code decides the spell damage based off the scaling types. 0 for wisdom, 1 for faith, 2 for both.
-		player.spellsAvailable -= spellSlotCost;
-		int finalDamage = 0;
-		
+	float powerModifier(character& player) {
+		float modifier = 0;
 		switch (scalingAttribute) {
 
 
-		case '0': 
-			finalDamage = baseDamage + static_cast<int>((player.wisdom * attributeDamageModifier));
+		case '0':
+			modifier = ((player.wisdom * attributePowerModifier));
+
+			break;
+		case '1':
+
+			modifier = ((sqrt(player.faith / 1.4) * attributePowerModifier));
+
+			break;
+		case '2':
+
+			modifier = (((player.faith + player.wisdom) * attributePowerModifier));
+
+			break;
+
+		default:
+
+			break;
+		}
+		return modifier;
+	}
+
+	int calculateSpellPower(character& player) {
+		// this code decides the spell damage based off the scaling types. 0 for wisdom, 1 for faith, 2 for both.
+		player.spellsAvailable -= spellSlotCost;
+		int finalDamage = 0;
+		int finalHealing = baseHealing + powerModifier(player);
+		int originalPlayerHealth = player.playerHealth;
+
+		if (finalHealing > 0 && player.playerHealth != player.playerMaxHealth) {
+			
+			player.playerHealth += finalHealing;
+			std::cout << "\nYou gain " << player.playerHealth - originalPlayerHealth << " Health Points!\n";
+			if (player.playerHealth > player.playerMaxHealth)
+				player.playerHealth = player.playerMaxHealth;
+		}
+		else {
+			player.spellsAvailable += spellSlotCost;
+		}
+		switch (scalingAttribute) {
+
+		case '0':
+			finalDamage = baseDamage + powerModifier(player);
 			finalDamage *= static_cast<int>((1 + intensity * 0.1));
 			return finalDamage;
 			break;
 		case '1':
 
-			finalDamage = baseDamage * static_cast<int>((sqrt(player.faith/1.4) * attributeDamageModifier));
+			finalDamage = baseDamage * powerModifier(player);
 			finalDamage *= static_cast<int>((1 + intensity * 0.162));
 			return finalDamage;
 			break;
 
 		case '2':
 
-			finalDamage = baseDamage + static_cast<int>(((player.faith + player.wisdom) * attributeDamageModifier));
+			finalDamage = baseDamage + powerModifier(player);
 			finalDamage *= static_cast<int>((1 + intensity * 0.1));
 			return finalDamage;
 			break;
@@ -407,11 +460,10 @@ public:
 
 			std::cout << "\n Something went wrong.. \n";
 			return 0;
-			
-
-
 
 		}
+		
+		
 	}
 };
 
@@ -451,7 +503,7 @@ public:
 			std::advance(it, rand() % EnemyStatsMap.size());
 			const EnemyStats& stats = it->second;
 			minLevel = it->second.minLevel;
-			if (player.level < minLevel){
+			//if (player.level < minLevel){
 				name = it->first;
 				enemyMaxHealth = it->second.maxHealth;
 				enemyHealth = it->second.maxHealth;
@@ -461,7 +513,7 @@ public:
 				experienceWorth = it->second.exp;
 				aiType = it->second.aiType;
 				tempDefense = defense;
-			}
+			//}
 		
 		}
 		else {
@@ -939,7 +991,7 @@ private:
 	bool itemsGenerated = false;
 	bool spellsGenerated = false;
 	bool doneShopping = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -1352,7 +1404,8 @@ public:
 				spell.updateSpell(spellUsed);
 
 				if (spell.spellSlotCost <= player.spellsAvailable) {
-					int spellDamage = spell.calculateSpellDamage(player);
+					int spellDamage = spell.calculateSpellPower(player);
+					if (spellDamage > 0)
 					opponent.takeDamage(spellDamage);
 					
 					intensity++;
@@ -1429,9 +1482,17 @@ int main() {
 	character test1(0,0,0,0,0,0);
 	shop shoptest(spelltest, testitem, test1);
 	test1.pickAttributes();
-	if (test1.getDexterity() > 5) {
+	if (test1.getDexterity() >= 5) {
 		testitem.grantPlayerItem(1); 
 		std::cout << "\nYour dexterity grants you a free throwing dagger.\n";
+
+	}
+	if (test1.getFaith() >= 6) {
+		testitem.grantPlayerItem(10);
+		testitem.grantPlayerItem(10);
+		testitem.grantPlayerItem(10);
+		std::cout << "\nYou find a broken cross necklace, and take some of the beads off of it.\n";
+		spelltest.grantPlayerSpell(4);
 
 	}
 	test.enemySet(20, 20, 1, 4, 10, 20, "beebie", test1);
