@@ -62,7 +62,9 @@ public:
 	unsigned short maximumSpellsAvailable = 0;
 
 
-
+	int getDexterity() {
+		return dexterity;
+	}
 	void displayStats() {
 
 		std::cout << "Player Name: " << name << std::endl
@@ -172,7 +174,7 @@ public:
 	void updateCharacterStats() {
 
 		playerMaxHealth = 10 + 2*(level-1) + endurance * 3;
-		defense = 0 + endurance * 2 + strength * 1;
+		defense = 0 + endurance * 2 + strength * 1 + (level*0.5);
 		temporaryDefense = defense;
 		magicDefense = faith * 2 + wisdom * 1 + luck * 1;
 		maximumSpellsAvailable = (faith / 6 + wisdom / 3); // adds up the two variables and rounds down
@@ -192,12 +194,14 @@ public:
 		faith = stat6;
 		updateCharacterStats();
 		playerHealth = playerMaxHealth;
+		
 
 	};
 	int calculateMeleeDamage(int enemyDefense) {
 		int baseDamage = static_cast<int>((strength *(1 + intensity * 0.1))-static_cast<float>(enemyDefense/2));		
+		int minimumDamage = 1 + strength / 4;
 		int damage = baseDamage * calcDamageVariance();
-		if (damage < 1) damage = 1;
+		if (damage < minimumDamage) damage = minimumDamage;
 		
 		return damage;
 	}
@@ -222,9 +226,10 @@ class spells {
 public:
 	char id = '0';
 	int baseDamage = 0;
-	float attributeDamageModifier = 0;
-	short cost = 0;
-	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both
+	float attributeDamageModifier = 0; 
+	short spellSlotCost = 0;
+	short spellPrice = 0;
+	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both, 3 is neither
 	std::string spellName = "default";
 	std::vector<char> spellsKnown;
 	
@@ -253,7 +258,7 @@ public:
 				
 				id = spellId;
 				updateSpell(spellId);
-				std::cout << i << ": " << spellName << " | Cost: " << cost << std::endl;
+				std::cout << i << ": " << spellName << " | Cost: " << spellSlotCost << std::endl;
 				i++;
 
 			}
@@ -298,21 +303,45 @@ public:
 		case 0:
 			
 			baseDamage = 3;
-			attributeDamageModifier = 1.4f;
+			attributeDamageModifier = 1.55f;
 			spellName = "Zap";
 			scalingAttribute = '0';
-			cost = 1;
-
+			spellSlotCost = 1;
+			spellPrice = 20;
 			break;
 		case 1:
 			
 			baseDamage = 6;
-			attributeDamageModifier = 1.1f;
+			attributeDamageModifier = 1.4f;
 			spellName = "Light Ray";
 			scalingAttribute = '1';
-			cost = 1;
+			spellSlotCost = 1;
+			spellPrice = 25;
 
 			break;
+
+		case 2:
+
+			baseDamage = 15;
+			spellName = "Hailstorm";
+			attributeDamageModifier = 1.4f;
+			scalingAttribute = '2'; // both
+			spellSlotCost = 2;
+			spellPrice = 40;
+
+			break;
+
+		case 3:
+
+			baseDamage = 22;
+			spellName = "Fireball";
+			attributeDamageModifier = 0.8f;
+			scalingAttribute = '0'; // wisdom
+			spellSlotCost = 2;
+			spellPrice = 40;
+
+			break;
+
 		default:
 			std::cout << "Hello, i'm not a spell!"; //this will display this humorous text if some how
 			// you input a wrong value when updating the spell
@@ -326,21 +355,21 @@ public:
 	}
 	int calculateSpellDamage(character& player) {
 		// this code decides the spell damage based off the scaling types. 0 for wisdom, 1 for faith, 2 for both.
-		player.spellsAvailable -= cost;
+		player.spellsAvailable -= spellSlotCost;
 		int finalDamage = 0;
 		
 		switch (scalingAttribute) {
 
 
-		case '0':
+		case '0': 
 			finalDamage = baseDamage + static_cast<int>((player.wisdom * attributeDamageModifier));
 			finalDamage *= static_cast<int>((1 + intensity * 0.1));
 			return finalDamage;
 			break;
 		case '1':
 
-			finalDamage = baseDamage + static_cast<int>((player.faith * attributeDamageModifier));
-			finalDamage *= static_cast<int>((1 + intensity * 0.1));
+			finalDamage = baseDamage * static_cast<int>((sqrt(player.faith/1.4) * attributeDamageModifier));
+			finalDamage *= static_cast<int>((1 + intensity * 0.162));
 			return finalDamage;
 			break;
 
@@ -479,8 +508,12 @@ private:
 	std::string itemType = "healing"; // damage, healing, buff, debuff
 	bool hasVariance = false; //determines if the item damage varies from 0.9 to 1.1
 	int itemCost = 0;
+	int itemQuantity = 1;
+	int intensityChange = 0; // + = more intense, - = less intense
 	std::vector<char> itemsHeld;
+	int spellSlotsRestored = 0;
 	friend class shop;
+	int input;
 
 public:
 	
@@ -507,8 +540,12 @@ public:
 		else if (attribute == "dexterity") {
 			return player.dexterity;
 		}
-		else if (attribute == "intelligence") {
+		else if (attribute == "wisdom") {
 			return player.wisdom;
+		}
+
+		else if (attribute == "faith") {
+			return player.faith;
 		}
 
 		// Return a default value if the attribute doesn't exist
@@ -524,10 +561,12 @@ public:
 	}
 
 	void updateItem(char itemId) {
-
-
+		
+		itemQuantity = 1;
+		intensityChange = 0;
 		switch (itemId) {
 
+			
 
 		case 0:
 			itemName = "Rock";
@@ -536,35 +575,37 @@ public:
 			itemType = "damage";
 			intensityScaleFactor = 0.05f;
 			itemHealingPower = 0;
-			itemCost = 3;
+			itemCost = 4;
 			break;
 		case 1:
 			itemName = "Throwing Dagger";
 			itemDamage = 7;
-			scalingType = "attribute";
+			scalingType = "both";
 			itemType = "damage";
-			attributeScalingFactor = 0.16f;
+			intensityScaleFactor = 0.06f;
+			attributeScalingFactor = 0.18f;
 			attributeScale = "dexterity";
+			itemQuantity = 2;
 			itemHealingPower = 0;
 			itemCost = 5;
 
 			break;
 		case 2:
 			itemName = "Dynamite";
-			itemDamage = 50;
+			itemDamage = 25;
 			scalingType = "static";
 			itemType = "damage";
-			itemCost = 10;
+			itemCost = 11;
 			itemHealingPower = 0;
 			break;
 		case 3:
 			itemName = "Dynamite+";
-			itemDamage = 65;
+			itemDamage = 40;
 			scalingType = "intensity";
-			intensityScaleFactor = 0.04f;
+			intensityScaleFactor = 0.03f;
 			itemHealingPower = 0;
 			itemType = "damage";
-			itemCost = 20;
+			itemCost = 25;
 
 			break;
 		case 4:
@@ -591,11 +632,105 @@ public:
 
 			itemName = "Healing Potion+";
 			itemHealingPower = 65;
-			itemCost = 18;
+			itemCost = 15;
 			scalingType = "static";
 			itemType = "healing";
 			itemDamage = 0;
 
+			break;
+
+		case 7:
+
+			itemName = "Manapowder";
+			itemHealingPower = 5;
+			itemCost = 40;
+			scalingType = "static";
+			itemType = "healing";
+			itemDamage = 0;
+			spellSlotsRestored = 1;
+
+			break;
+
+		case 8:
+
+			itemName = "Sanguine Thrownknife";
+			itemHealingPower = 4;
+			itemCost = 10;
+			scalingType = "attribute";
+			attributeScale = "dexterity";
+			itemType = "damage";
+			itemDamage = 10;
+			attributeScalingFactor = 0.13f;
+			
+
+			break;
+
+		case 9:
+
+			itemName = "Boulder";
+			itemHealingPower = 0;
+			itemCost = 25;
+			scalingType = "attribute";
+			attributeScale = "strength";
+			itemType = "damage";
+			itemDamage = 9;
+			attributeScalingFactor = 0.19f;
+
+			break;
+			
+		case 10:
+
+			itemName = "Prayer Bead";
+			itemHealingPower = 0;
+			itemCost = 5;
+			scalingType = "attribute";
+			attributeScale = "faith";
+			itemType = "damage";
+			itemDamage = 2;
+			attributeScalingFactor = 0.50f;
+
+			break;
+
+		case 11:
+			itemName = "Crazy Orb";
+			itemDamage = 0;
+			scalingType = "static";
+			itemType = "buff";
+			intensityScaleFactor = 0.0f;
+			itemHealingPower = 0;
+			itemCost = 12;
+			intensityChange = 4;
+			break;
+		case 12:
+			itemName = "Calm Feather";
+			itemDamage = 0;
+			scalingType = "static";
+			itemType = "buff";
+			intensityScaleFactor = 0.0f;
+			itemHealingPower = 0;
+			itemCost = 10;
+			intensityChange = -4;
+			break;
+		case 13:
+			itemName = "Grand Hammer";
+			itemDamage = 30;
+			scalingType = "static";
+			itemType = "damage";
+			intensityScaleFactor = 0.0f;
+			itemHealingPower = 0;
+			itemCost = 25;
+			intensityChange = -6;
+			break;
+		case 14:
+			itemName = "Escalating Dagger";
+			itemDamage = 7;
+			itemHealingPower = 0;
+			attributeScale = "dexterity";
+			scalingType = "attribute";
+			itemType = "damage";
+			itemCost = 8;
+			intensityChange = 1;
+			attributeScalingFactor = 0.15f;
 			break;
 		default:
 			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
@@ -628,7 +763,7 @@ public:
 			if (battling) {
 				std::cout << "Type the number of the item you'd like to use, or anything else to cancel. \n";
 
-				int input;
+				
 				std::cin >> input;
 
 				if (std::cin.fail() || input < 1 || input > itemsHeld.size()) {
@@ -639,7 +774,7 @@ public:
 				}
 
 				char usedItem = itemsHeld[input - 1];
-				itemsHeld.erase(itemsHeld.begin() + (input - 1));
+				
 				useItem(usedItem, player, opponent);
 				intensity++;
 				
@@ -651,33 +786,93 @@ public:
 
 	void useItem(char itemUsed, character& player, enemy& opponent) {
 		updateItem(itemUsed);
+
+		if (intensityChange != 0) {
+			if ((intensity + intensityChange) < 0) {
+				std::cout << "\nThings can't get any calmer.\n";
+			}else
+				intensity += intensityChange;
+			std::cout << "\nThe world grows more restless\n";
+		}
 		if (itemType == "healing" && player.playerHealth < player.playerMaxHealth) {
 			player.playerHealth += itemHealingPower; // you should replace this with a player.heal function
-			if (player.playerHealth > player.playerMaxHealth) player.playerHealth = player.playerMaxHealth;
+			std::cout << "\nYou gain " << itemHealingPower << " Health Points!";
+			itemsHeld.erase(itemsHeld.begin() + (input - 1));
+
+			if (spellSlotsRestored > 0) {
+				player.spellsAvailable += spellSlotsRestored;
+				if (player.spellsAvailable > player.maximumSpellsAvailable) {
+					std::cout << "\nSome of the ethereal mana fades away";
+					player.spellsAvailable = player.maximumSpellsAvailable;
+				}
+			}
+
+			if (player.playerHealth > player.playerMaxHealth) {
+				std::cout << "\nBut some of it was wasted..";
+				player.playerHealth = player.playerMaxHealth;
+			}
+			
 
 		}
-		else if (itemType == "damage") {
+		if (itemType == "buff") itemsHeld.erase(itemsHeld.begin() + (input - 1));
+		 if (itemType == "damage") {
 			int finalItemDamage = itemDamage;
 			int scalingCode = getScalingTypeCode(scalingType);
 			int attribute = getPlayerAttribute(player, attributeScale);
+			if (itemHealingPower > 0) {
+				player.playerHealth += itemHealingPower; // you should replace this with a player.heal function
+				std::cout << "\nYou gain " << itemHealingPower << " Health Points!";
+			}
 			switch (scalingCode) {
 
 			case 1:
 				finalItemDamage = itemDamage * (1 + intensity * intensityScaleFactor);
+				itemsHeld.erase(itemsHeld.begin() + (input - 1));
 				break;
 			case 2:
 				finalItemDamage = itemDamage * (1 + attribute * attributeScalingFactor);
+				itemsHeld.erase(itemsHeld.begin() + (input - 1));
 				break;
 			case 3:
+				finalItemDamage = itemDamage * (1 + ((attribute * attributeScalingFactor)+(intensity*intensityScaleFactor)));
+				itemsHeld.erase(itemsHeld.begin() + (input - 1));
 				break;
 			default:
+				itemsHeld.erase(itemsHeld.begin() + (input - 1));
 				break;
 
 			}
-			std::cout << "Your item does " << finalItemDamage << " Damage";
-			opponent.takeDamage(finalItemDamage);
-		}
+			std::cout << "Your item does " << finalItemDamage << " Damage!";
 
+			opponent.takeDamage(finalItemDamage);
+			if (id == 1 || id == 8 || id == 14) {
+			label_name:
+
+				float multiDaggerChance = player.dexterity / 2.5;
+				if (multiDaggerChance > 20) multiDaggerChance = 20;
+				rolledNumber = rand() % 101;
+				if (multiDaggerChance > rolledNumber) {
+					finalItemDamage /= 1.5;
+					std::cout << "\nAnother dagger appears, flying into your target!";
+					opponent.takeDamage(finalItemDamage);
+					switch (id) {
+
+					case 8:
+						player.playerHealth += itemHealingPower;
+						std::cout << "\nYou gain " << itemHealingPower << " Health Points!";
+						break;
+					case 14:
+						intensity += intensityChange;
+						break;
+					}
+
+					goto label_name;
+				}
+			} // multi dagger throwing
+					
+			
+		}
+		 turnsElapsed++;
 	}
 
 };
@@ -690,6 +885,8 @@ private:
 	bool itemsGenerated = false;
 	bool spellsGenerated = false;
 	bool doneShopping = false;
+	std::vector<char> availableSpells = { 0, 1, 2, 3 };
+	std::vector<char> spellsInShop;
 
 public:
 
@@ -709,9 +906,10 @@ public:
 		
 		std::cout << "-----Buy Items-----\n";
 		
-		for (int i = 1; i <= 3; i++) { 
+		for (int i = 1; i <= 4; i++) { 
 				
-			int randomItemId = rand() % 7; //generates a random item
+			int randomItemId = rand() % 15; //generates a random item
+			bool isPair = (rand() % 100 < 20);
 			if(!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
 		
 			}
@@ -721,7 +919,7 @@ public:
 			int itemId = itemsInShop[i];
 			shopItem.updateItem(itemId); //reads and updates the data
 
-			std::cout << i + 1<< ") " << shopItem.itemName << " Cost: " << shopItem.itemCost << " gold." << "\n";
+			std::cout << i + 1<< ") " << shopItem.itemQuantity << " " << shopItem.itemName << " | Cost: " << shopItem.itemCost << " gold.\n";
 
 		
 		}
@@ -739,9 +937,10 @@ public:
 
 				if (player.gold >= shopItem.itemCost) {
 					player.gold -= shopItem.itemCost;
-					shopItem.itemsHeld.push_back(selectedItemId);
+					for(int i = 0;i < shopItem.itemQuantity; i++) shopItem.itemsHeld.push_back(selectedItemId);
+					
 					itemsInShop.erase(itemsInShop.begin() + (purchaseChoice - 1));
-					std::cout << "\nItem Purchased";
+					std::cout << "\nItem(s) Purchased";
 
 				}
 				else {
@@ -760,14 +959,65 @@ public:
 		std::cout << "\nBye-bye!\n";
 		doneShopping = true;
 		itemsGenerated = false;
+		spellsGenerated = false;
 		itemsInShop.clear();
-
+		spellsInShop.clear();
 	}
 
 	void spellShopMenu() {
+		std::cout << "-----Buy Spells-----\n";
+		
+		
+		if(!spellsGenerated) while (spellsInShop.size() < 2) {
+
+			int randomSpell = rand() % availableSpells.size(); // gets a random spell from the spells available in the game
+			char spellId = availableSpells[randomSpell];
+
+			if (std::find(shopSpell.spellsKnown.begin(), shopSpell.spellsKnown.end(), spellId) == shopSpell.spellsKnown.end() &&
+				std::find(spellsInShop.begin(), spellsInShop.end(), spellId) == spellsInShop.end()) {
+				spellsInShop.push_back(spellId);
+			}
+			
 
 
+		}
+		spellsGenerated = true;
+		
+		for (int i = 0; i < spellsInShop.size(); i++) {
 
+			shopSpell.updateSpell(spellsInShop[i]);
+			std::cout << i + 1 << ") " << shopSpell.spellName << " | Cost:" << shopSpell.spellPrice << " gold\n";
+
+
+		}
+
+		if (!spellsInShop.empty()) {
+
+			std::cout << "What would you like to buy?\n";
+
+			int purchaseChoice;
+			std::cin >> purchaseChoice;
+			handleInputFailure("Choose one of the displayed numbers.");
+
+			if (purchaseChoice >= 1 && purchaseChoice <= spellsInShop.size()) {
+
+				int selectedSpellId = spellsInShop[purchaseChoice - 1];
+				shopSpell.updateSpell(selectedSpellId);
+
+				if (player.gold >= shopSpell.spellPrice) {
+					player.gold -= shopSpell.spellPrice;
+					shopSpell.grantPlayerSpell(selectedSpellId);
+					std::cout << "Spell Purchased! You now know " << shopSpell.spellName << ".\n";
+				}
+				else {
+					std::cout << "Not enough gold.\n";
+				}
+			}
+		}
+		else
+		{
+			std::cout << "You bought everything!";
+		}
 	}
 
 	void shopMenu() {
@@ -776,7 +1026,7 @@ public:
 		doneShopping = false;
 		std::cout <<  "Welcome to the shop!";
 		while (!doneShopping && player.playerHealth > 0) {
-			int healPrice = ((player.playerMaxHealth - player.playerHealth) / 2 + 5 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level*0.9);
+			int healPrice = ((player.playerMaxHealth - player.playerHealth) / 3 + 4 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level*0.8);
 			std::cout
 				<< "\nYou have " << player.gold << " Gold."
 				<< "\n1) Items"
@@ -803,8 +1053,9 @@ public:
 				itemShopMenu(shopItem);
 				break;
 			case 2:
+				spellShopMenu();
 				break;
-			case 3:
+			case 3: // handles player healing. All or nothing. I think i'll give you the ability to pick between healing spell slots and hp
 			{
 				if (player.gold >= healPrice) {
 					player.gold -= healPrice;
@@ -817,15 +1068,15 @@ public:
 				break;
 			}
 
-				break;
+				
 			case 4:
 				player.displayStats();
 				break;
 			case 5:
-				shopReset();
+				shopReset(); // this quits the shop btw
 				break;
 			default:
-				std::cout << "Please enter a number 1-4";
+				std::cout << "Please enter a number 1-5";
 				break;
 
 			};
@@ -965,10 +1216,10 @@ public:
 		std::string randomName = "Alfred";
 
 		randomHealth = rand() % (28 + player.level * 4) + 4;
-		randomAttack = rand() % (3 + player.level * 4);
-		randomDefense = rand() % (13 + player.level * 3);
-		randomXP = rand() % (30 + player.level*3) + player.level*3; 
-		randomGold = rand() % 12 + player.level * 3;
+		randomAttack = rand() % (3 + player.level * 4) + 1;
+		randomDefense = rand() % (12 + player.level * 3) + 1;
+		randomXP = rand() % (27 + player.level*3) + player.level*3; 
+		randomGold = rand() % 8 + player.level * 2;
 		randomName = "alfred " + std::to_string(rand() % 200);
 
 		opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack, randomGold, randomXP, randomName);
@@ -984,8 +1235,8 @@ public:
 
 				
 				std::cout
-					<< "\nEnemy Health: " << opponent.enemyHealth
-					<< "\nYour Health: " << player.playerHealth
+					<< "\nEnemy Health: " << opponent.enemyHealth << " / " << opponent.enemyMaxHealth
+					<< "\nYour Health: " << player.playerHealth << " / " << player.playerMaxHealth
 				<< std::endl << "1) Attack"
 				<< std::endl << "2) Defend"
 				<< std::endl << "3) Spells"
@@ -1038,11 +1289,12 @@ public:
 				break;
 			case 3:
 			{
+				std::cout <<"\nSpells Available: "<< player.spellsAvailable << "\n";
 				char spellUsed = spell.displaySpellMenu();
 				if (spellUsed == 'f') break;  //f is the default 
 				spell.updateSpell(spellUsed);
 
-				if (spell.cost <= player.spellsAvailable) {
+				if (spell.spellSlotCost <= player.spellsAvailable) {
 					int spellDamage = spell.calculateSpellDamage(player);
 					opponent.takeDamage(spellDamage);
 					
@@ -1106,20 +1358,21 @@ public:
 			
 	};
 
-
-
 int main() {
 
 	srand(static_cast<unsigned int>(time(NULL)));
 	enemy test;
 	items testitem;
 	spells spelltest;
-	testitem.grantPlayerItem(1);
-	spelltest.grantPlayerSpell(0);
 	character test1(0,0,0,0,0,0);
 	shop shoptest(spelltest, testitem, test1);
 	test1.pickAttributes();
-	test.enemySet(20, 20, 1, 12, 10, 20, "beebie");
+	if (test1.getDexterity() > 5) {
+		testitem.grantPlayerItem(1); 
+		std::cout << "\nYour dexterity grants you a free throwing dagger.\n";
+
+	}
+	test.enemySet(20, 20, 1, 4, 10, 20, "beebie");
 	combatHandler combat1(test1, test, spelltest, testitem, shoptest);
 	while (test1.playerHealth > 0) {
 		battling = true;
@@ -1127,7 +1380,7 @@ int main() {
 		turnsElapsed = 0;
 		combat1.initiateCombat();
 		shoptest.shopMenu();
-
+		
 	}
 	
 	
