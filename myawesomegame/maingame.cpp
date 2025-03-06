@@ -6,6 +6,7 @@
 #include <cmath>
 #include <vector>
 #include <limits>
+#include <unordered_map>
 
 int intensity = 0;
 int input = 0;
@@ -33,8 +34,6 @@ bool handleInputFailure(const std::string& errorMessage) {
 void setColor(int color) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 }
-
-
 
 class character {
 
@@ -66,13 +65,14 @@ public:
 
 	void displayStats() {
 
-		std::cout << "Player Name: " << name << std::endl;
-		std::cout << "Max Health: " << playerMaxHealth << std::endl;
-		std::cout << "Current Health: " << playerHealth << std::endl;
-		std::cout << "Defense: " << defense << std::endl;
-		std::cout << "Magic Defense: " << magicDefense << std::endl;
-		std::cout << "--------Stats--------" << std::endl;
-		std::cout << "Endurance: " << endurance << std::endl
+		std::cout << "Player Name: " << name << std::endl
+			<< "\nGold: " << gold
+		 << "\nMax Health: " << playerMaxHealth << std::endl
+		 << "Current Health: " << playerHealth << std::endl
+		 << "Defense: " << defense << std::endl
+		 << "Magic Defense: " << magicDefense << std::endl
+		 << "--------Stats--------" << std::endl
+		 << "Endurance: " << endurance << std::endl
 			<< "Strength: " << strength << std::endl
 			<< "Dexterity: " << dexterity << std::endl
 			<< "Wisdom: " << wisdom << std::endl
@@ -171,7 +171,7 @@ public:
 	}
 	void updateCharacterStats() {
 
-		playerMaxHealth = 10 + endurance * 3;
+		playerMaxHealth = 10 + 2*(level-1) + endurance * 3;
 		defense = 0 + endurance * 2 + strength * 1;
 		temporaryDefense = defense;
 		magicDefense = faith * 2 + wisdom * 1 + luck * 1;
@@ -474,14 +474,47 @@ private:
 	int itemDamage = 0;
 	std::string scalingType = "static"; //  static, intensity, attribute, both
 	float intensityScaleFactor = 0.0f; //item intensity scaling
-	std::string attributeScale = "Strength"; //replace with scaling attribute
+	std::string attributeScale = "strength"; //replace with scaling attribute
 	float attributeScalingFactor = 0.0f;  //item attribute scaling
 	std::string itemType = "healing"; // damage, healing, buff, debuff
+	bool hasVariance = false; //determines if the item damage varies from 0.9 to 1.1
 	int itemCost = 0;
 	std::vector<char> itemsHeld;
-
+	friend class shop;
 
 public:
+	
+	const std::unordered_map<std::string, int> scalingTypeMap = {
+	{"static", 0},
+	{"intensity", 1},
+	{"attribute", 2},
+	{"both", 3}
+	};
+
+	int getScalingTypeCode(const std::string& scalingType) {
+		auto it = scalingTypeMap.find(scalingType); // this looks within the map to find the scaling type.
+		if (it != scalingTypeMap.end()) {
+			return it->second; // this returns the second value of what we were looking through
+		}
+		return -1; // 
+	}
+
+	int getPlayerAttribute(character& player, const std::string& attribute) {
+		// Map the string to the corresponding player attribute
+		if (attribute == "strength") {
+			return player.strength;
+		}
+		else if (attribute == "dexterity") {
+			return player.dexterity;
+		}
+		else if (attribute == "intelligence") {
+			return player.wisdom;
+		}
+
+		// Return a default value if the attribute doesn't exist
+		static int defaultAttr = 0;
+		return defaultAttr;
+	}
 
 	void grantPlayerItem(char itemId) {
 
@@ -500,6 +533,7 @@ public:
 			itemName = "Rock";
 			itemDamage = 12;
 			scalingType = "intensity";
+			itemType = "damage";
 			intensityScaleFactor = 0.05f;
 			itemHealingPower = 0;
 			itemCost = 3;
@@ -508,6 +542,7 @@ public:
 			itemName = "Throwing Dagger";
 			itemDamage = 7;
 			scalingType = "attribute";
+			itemType = "damage";
 			attributeScalingFactor = 0.16f;
 			attributeScale = "dexterity";
 			itemHealingPower = 0;
@@ -518,6 +553,7 @@ public:
 			itemName = "Dynamite";
 			itemDamage = 50;
 			scalingType = "static";
+			itemType = "damage";
 			itemCost = 10;
 			itemHealingPower = 0;
 			break;
@@ -527,6 +563,7 @@ public:
 			scalingType = "intensity";
 			intensityScaleFactor = 0.04f;
 			itemHealingPower = 0;
+			itemType = "damage";
 			itemCost = 20;
 
 			break;
@@ -604,6 +641,7 @@ public:
 				char usedItem = itemsHeld[input - 1];
 				itemsHeld.erase(itemsHeld.begin() + (input - 1));
 				useItem(usedItem, player, opponent);
+				intensity++;
 				
 			}
 		}
@@ -618,7 +656,182 @@ public:
 			if (player.playerHealth > player.playerMaxHealth) player.playerHealth = player.playerMaxHealth;
 
 		}
+		else if (itemType == "damage") {
+			int finalItemDamage = itemDamage;
+			int scalingCode = getScalingTypeCode(scalingType);
+			int attribute = getPlayerAttribute(player, attributeScale);
+			switch (scalingCode) {
 
+			case 1:
+				finalItemDamage = itemDamage * (1 + intensity * intensityScaleFactor);
+				break;
+			case 2:
+				finalItemDamage = itemDamage * (1 + attribute * attributeScalingFactor);
+				break;
+			case 3:
+				break;
+			default:
+				break;
+
+			}
+			std::cout << "Your item does " << finalItemDamage << " Damage";
+			opponent.takeDamage(finalItemDamage);
+		}
+
+	}
+
+};
+
+class shop {
+
+private:
+	int objectsAvailable = 4;
+	std::string shopType = "items";
+	bool itemsGenerated = false;
+	bool spellsGenerated = false;
+	bool doneShopping = false;
+
+public:
+
+	spells& shopSpell;
+	items& shopItem;
+	character& player;
+	friend items;
+	friend spells;
+	friend character;
+	std::vector<char> itemsInShop;
+	shop(spells& s, items& i, character& c) : shopSpell(s), shopItem(i), player(c){
+
+
+	}
+
+	void itemShopMenu(items& shopItem) {
+		
+		std::cout << "-----Buy Items-----\n";
+		
+		for (int i = 1; i <= 3; i++) { 
+				
+			int randomItemId = rand() % 7; //generates a random item
+			if(!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
+		
+			}
+		itemsGenerated = true;
+			
+		for (int i = 0; i < itemsInShop.size(); i++) {
+			int itemId = itemsInShop[i];
+			shopItem.updateItem(itemId); //reads and updates the data
+
+			std::cout << i + 1<< ") " << shopItem.itemName << " Cost: " << shopItem.itemCost << " gold." << "\n";
+
+		
+		}
+		if (!itemsInShop.empty()) {
+			std::cout << "What would you like to buy?\n";
+
+			int purchaseChoice;
+			std::cin >> purchaseChoice;
+			handleInputFailure("Choose one of the displayed numbers.");
+
+			if (purchaseChoice >= 1 && purchaseChoice <= itemsInShop.size()) {
+
+				int selectedItemId = itemsInShop[purchaseChoice - 1];
+				shopItem.updateItem(selectedItemId);
+
+				if (player.gold >= shopItem.itemCost) {
+					player.gold -= shopItem.itemCost;
+					shopItem.itemsHeld.push_back(selectedItemId);
+					itemsInShop.erase(itemsInShop.begin() + (purchaseChoice - 1));
+					std::cout << "\nItem Purchased";
+
+				}
+				else {
+
+					std::cout << "\nYou don't have enough gold.";
+				}
+			}
+		}
+		else
+		{
+			std::cout << "You bought everything!";
+		}
+	}
+
+	void shopReset() {
+		std::cout << "\nBye-bye!\n";
+		doneShopping = true;
+		itemsGenerated = false;
+		itemsInShop.clear();
+
+	}
+
+	void spellShopMenu() {
+
+
+
+	}
+
+	void shopMenu() {
+
+		int shopChoice;
+		doneShopping = false;
+		std::cout <<  "Welcome to the shop!";
+		while (!doneShopping && player.playerHealth > 0) {
+			int healPrice = ((player.playerMaxHealth - player.playerHealth) / 2 + 5 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level*0.9);
+			std::cout
+				<< "\nYou have " << player.gold << " Gold."
+				<< "\n1) Items"
+				<< "\n2) Spells"
+				<< "\n3) Heal" << "(" << healPrice << " gold)"
+				<< "\n4) Check"
+				<< "\n5) Leave shop\n";
+
+			
+			
+
+			std::cin >> shopChoice;
+
+			if (std::cin.fail()) { 
+				std::cin.clear();
+				std::cin.ignore(10000, '\n');
+				std::cout << "Invalid input! Choose a number 1-3.\n";
+				continue; // i didn't know this but it restarts the loop, I think theres another one which doesn't do that?
+			}
+
+			switch (shopChoice) {
+
+			case 1:
+				itemShopMenu(shopItem);
+				break;
+			case 2:
+				break;
+			case 3:
+			{
+				if (player.gold >= healPrice) {
+					player.gold -= healPrice;
+					player.playerHealth = player.playerMaxHealth;
+					player.spellsAvailable = player.maximumSpellsAvailable;
+					std::cout << "\nYou have been healed";
+				}
+				else
+					std::cout << "\nNot enough gold";
+				break;
+			}
+
+				break;
+			case 4:
+				player.displayStats();
+				break;
+			case 5:
+				shopReset();
+				break;
+			default:
+				std::cout << "Please enter a number 1-4";
+				break;
+
+			};
+
+			
+		}
 	}
 
 };
@@ -633,6 +846,7 @@ private:
 	enemy& opponent;
 	spells& spell;
 	items& item;
+	shop& shops;
 
 	bool intensity10 = false;
 	bool intensity20 = false;
@@ -640,7 +854,7 @@ private:
 
 public:
 	
-	combatHandler(character& p, enemy& e, spells& s, items& i) : player(p), opponent(e), spell(s), item(i) {
+	combatHandler(character& p, enemy& e, spells& s, items& i, shop& sh) : player(p), opponent(e), spell(s), item(i), shops(sh) {
 		std::cout << std::endl << "BATTLE START!" << std::endl;
 	};
 	void battleRewards() {
@@ -750,12 +964,12 @@ public:
 		int randomGold = 0;
 		std::string randomName = "Alfred";
 
-		randomHealth = rand() % 30 + player.level * 4;
-		randomAttack = rand() % 7 + player.level * 6;
-		randomDefense = rand() % 13 + player.level * 3;
-		randomXP = rand() % 30 + player.level * 10;
+		randomHealth = rand() % (28 + player.level * 4) + 4;
+		randomAttack = rand() % (3 + player.level * 4);
+		randomDefense = rand() % (13 + player.level * 3);
+		randomXP = rand() % (30 + player.level*3) + player.level*3; 
 		randomGold = rand() % 12 + player.level * 3;
-		randomName = "alfred" + rand() % 200;
+		randomName = "alfred " + std::to_string(rand() % 200);
 
 		opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack, randomGold, randomXP, randomName);
 		
@@ -769,7 +983,9 @@ public:
 			if(turnsElapsed % 2 == 0){
 
 				
-			std::cout 
+				std::cout
+					<< "\nEnemy Health: " << opponent.enemyHealth
+					<< "\nYour Health: " << player.playerHealth
 				<< std::endl << "1) Attack"
 				<< std::endl << "2) Defend"
 				<< std::endl << "3) Spells"
@@ -802,7 +1018,9 @@ public:
 
 				if (criticalHit) {
 					damage *= 2;
-					std::cout << "Critical Hit! ";
+					setColor(4);
+					std::cout << "\nCritical Hit!\n ";
+					setColor(7);
 				}
 
 				opponent.takeDamage(damage);
@@ -842,7 +1060,6 @@ public:
 			case 4:
 			{
 				char itemUsed = item.displayItemMenu(player, opponent);
-				
 				
 				break;
 			}
@@ -884,6 +1101,7 @@ public:
 			
 			}
 			enemyRandomizer();
+			
 		}
 			
 	};
@@ -896,17 +1114,19 @@ int main() {
 	enemy test;
 	items testitem;
 	spells spelltest;
-	testitem.grantPlayerItem(4);
+	testitem.grantPlayerItem(1);
 	spelltest.grantPlayerSpell(0);
 	character test1(0,0,0,0,0,0);
+	shop shoptest(spelltest, testitem, test1);
 	test1.pickAttributes();
 	test.enemySet(20, 20, 1, 12, 10, 20, "beebie");
-	combatHandler combat1(test1, test, spelltest, testitem);
+	combatHandler combat1(test1, test, spelltest, testitem, shoptest);
 	while (test1.playerHealth > 0) {
 		battling = true;
 		intensity = 0;
 		turnsElapsed = 0;
 		combat1.initiateCombat();
+		shoptest.shopMenu();
 
 	}
 	
