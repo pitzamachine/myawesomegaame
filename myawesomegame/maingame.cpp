@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <iostream>
 #include <string>
 #include <Windows.h>
@@ -19,6 +20,17 @@ int enemyRoll;
 int turnsElapsed = 0;
 int roundsPassed = 0;
 int roundsNeeded = 2;
+
+std::string drawHealthBar(int currentHP, int maxHP) { 
+	int segments = std::round((static_cast<float>(currentHP) / maxHP) * 9);
+	segments = std::max(0, std::min(9, segments));
+	std::string bar = "[";
+	for (int i = 0; i < 9; i++) {
+		bar += (i < segments) ? "#" : "_";
+	}
+	bar += "]";
+	return bar;
+}
 
 void clear() {
 	// CSI[2J clears screen, CSI[H moves the cursor to top-left corner
@@ -269,7 +281,7 @@ public:
 
 	bool criticalCalculator() {
 
-		double critChance = 3 + luck + faith / 3;  // determine crit chance
+		double critChance = 3 + luck + faith / 3 + dexterity/4;  // determine crit chance
 		if (critChance > 93) critChance = 93;
 		rolledNumber = rand() % 100;
 		bool criticalHit = (critChance > rolledNumber);
@@ -1135,10 +1147,12 @@ class shop {
 
 private:
 	int objectsAvailable = 4;
+	int recycleCount = 0;
 	std::string shopType = "items";
 	bool itemsGenerated = false;
 	bool spellsGenerated = false;
 	bool doneShopping = false;
+	bool shopUpgraded = false;
 	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 	std::vector<char> spellsInShop;
 
@@ -1147,11 +1161,12 @@ public:
 	spells& shopSpell;
 	items& shopItem;
 	character& player;
+	enemy& opponent;
 	friend items;
 	friend spells;
 	friend character;
 	std::vector<char> itemsInShop;
-	shop(spells& s, items& i, character& c) : shopSpell(s), shopItem(i), player(c){
+	shop(spells& s, items& i, character& c, enemy& e) : shopSpell(s), shopItem(i), player(c), opponent(e){
 
 
 	}
@@ -1292,20 +1307,129 @@ public:
 		}
 	}
 
-	void shopReset() {
+	void leaveShop() {
 		std::cout << "\nBye-bye!\n";
+		recycleCount = 0;
 		doneShopping = true;
+		itemsGenerated = false;
+		spellsGenerated = false;
+		itemsInShop.clear();
+		spellsInShop.clear();
+
+	}
+
+	void shopRefresh() {
+
 		itemsGenerated = false;
 		spellsGenerated = false;
 		itemsInShop.clear();
 		spellsInShop.clear();
 	}
 
+	void itemManage() {
+		
+		int manageChoice;
+		int actionChoice;
+		bool itemManaged = false;
+
+		
+		shopItem.displayItemMenu(player, opponent);
+		if (shopItem.itemsHeld.empty()) {
+			std::cout << "\nNo items to manage!\n";
+			return;
+		}
+
+		std::cout << "\nWhich item do you wish to manage? (1-" << shopItem.itemsHeld.size() << ")\n";
+		std::cin >> manageChoice;
+
+		
+		if (handleInputFailure("\nInvalid input, managing cancelled.") ||
+			manageChoice < 1 || manageChoice > shopItem.itemsHeld.size()) {
+			std::cout << "\nChoose an item within your inventory (1-" << shopItem.itemsHeld.size() << ").\n";
+			return;
+		}
+
+		
+		char selectedItem = shopItem.itemsHeld[manageChoice - 1];
+		shopItem.updateItem(selectedItem);
+
+		
+		while (!itemManaged) {
+			std::cout << "\n" << shopItem.itemName << "\nWhat do you wish to do with this item?"
+				<< "\nRecycles used: " << recycleCount << "/" << "2\n"
+				<< "\n1) Throw away"
+				<< "\n2) Recycle"
+				<< "\n3) Keep\n";
+
+			std::cin >> actionChoice;
+
+			if (handleInputFailure("\nInvalid input.")) {
+				std::cout << "\nPlease enter a number 1-3.\n";
+				continue;
+			}
+
+			if (actionChoice < 1 || actionChoice > 3) {
+				std::cout << "\nChoose one of the following options (1-3).\n";
+				continue;
+			}
+
+			switch (actionChoice) {
+			case 1: 
+				shopItem.itemsHeld.erase(shopItem.itemsHeld.begin() + (manageChoice - 1));
+				std::cout << "\n" << shopItem.itemName << " tossed.\n";
+				itemManaged = true;
+				break;
+			case 2: {
+				int recycleCost = 5 + recycleCount * 2;
+				if (recycleCount < 2) {
+					if (player.gold >= recycleCost) {
+						player.gold -= recycleCost;
+						recycleCount++;
+						int randomItemId = rand() % 16;
+
+						std::cout << "\nYou recycled your " << shopItem.itemName << "...\n";
+						shopItem.itemsHeld.erase(shopItem.itemsHeld.begin() + (manageChoice - 1));
+						shopItem.itemsHeld.push_back(randomItemId);
+						shopItem.updateItem(randomItemId);
+						std::cout << "\nand got a " << shopItem.itemName << " for " << recycleCost << " gold!\n";
+					}
+					else {
+						std::cout << "You need " << recycleCost << " gold to recycle an item";
+					}
+					itemManaged = true;
+					break;
+				}
+				else
+				{
+					std::cout << "\nYou've already recycled twice this visit!";
+						itemManaged = true;
+					break;
+				}
+			}
+			case 3: 
+				std::cout << "\n" << shopItem.itemName << " kept.\n";
+				itemManaged = true;
+				break;
+			}
+		}
+
+
+	}
+
+
+
 	void spellShopMenu() {
 		std::cout << "-----Buy Spells-----\n";
 		
-		
-		if(!spellsGenerated) while (spellsInShop.size() < 3) {
+		int availableCount = 0;
+		for (char spell : availableSpells) {
+			if (std::find(shopSpell.spellsKnown.begin(), shopSpell.spellsKnown.end(), spell) == shopSpell.spellsKnown.end() &&
+				std::find(spellsInShop.begin(), spellsInShop.end(), spell) == spellsInShop.end()) {
+				availableCount++;
+			}
+		}
+
+		if(!spellsGenerated) while (spellsInShop.size() < std::min(3, availableCount)) {
 
 			int randomSpell = rand() % availableSpells.size(); // gets a random spell from the spells available in the game
 			char spellId = availableSpells[randomSpell];
@@ -1354,7 +1478,7 @@ public:
 		}
 		else
 		{
-			std::cout << "You bought everything!";
+			std::cout << "\nThere are no more spells to learn!";
 		}
 	}
 
@@ -1373,7 +1497,9 @@ public:
 				<< "\n2) Spells"
 				<< "\n3) Healer" 
 				<< "\n4) Check"
-				<< "\n5) Leave shop\n";
+				<< "\n5) Refresh"
+				<< "\n6) Manage Items"
+				<< "\n7) Leave shop\n";
 
 			
 			
@@ -1383,7 +1509,7 @@ public:
 			if (std::cin.fail()) { 
 				std::cin.clear();
 				std::cin.ignore(10000, '\n');
-				std::cout << "Invalid input! Choose a number 1-3.\n";
+				std::cout << "Invalid input! Choose a number 1-7.\n";
 				continue; // i didn't know this but it restarts the loop, I think theres another one which doesn't do that?
 			}
 
@@ -1398,16 +1524,6 @@ public:
 			case 3: // handles player healing. All or nothing. I think i'll give you the ability to pick between healing spell slots and hp
 			{
 				healChoiceMenu();
-				//if (player.gold >= healPrice) {
-					//player.gold -= healPrice;
-					//player.playerHealth = player.playerMaxHealth;
-					//player.spellsAvailable = player.maximumSpellsAvailable;
-					//setColor(2);
-					//std::cout << "\nYou have been healed";
-					//setColor(7);
-				//}
-				//else
-				//	std::cout << "\nNot enough gold";
 				break;
 			}
 
@@ -1416,7 +1532,21 @@ public:
 				player.displayStats();
 				break;
 			case 5:
-				shopReset(); // this quits the shop btw
+				if (player.gold >= 5) {
+					player.gold -= 5;
+					shopRefresh();
+					std::cout << "\nShop refreshed.";
+				}
+				else {
+					std::cout << "\nYou need 5 gold to refresh the shop";
+				}
+
+				break;
+			case 6:
+				itemManage();
+				break;
+			case 7:
+				leaveShop();
 				break;
 			default:
 				std::cout << "Please enter a number 1-5";
@@ -1558,7 +1688,7 @@ public:
 		int randomGold = 0;
 		std::string randomName = "Alfred";
 
-		randomHealth = rand() % (28 + player.level * 4) + 4;
+		randomHealth = rand() % (28 + player.level * 9) + 6;
 		randomAttack = rand() % (3 + player.level * 4) + 1;
 		randomDefense = rand() % (12 + player.level * 3) + 1;
 		randomXP = (randomHealth + randomAttack + randomDefense)/1.5;
@@ -1584,9 +1714,9 @@ public:
 
 				
 				std::cout
-					<< "\nEnemy Health: " << opponent.enemyHealth << " / " << opponent.enemyMaxHealth
-					<< "\nEnemy Attack: " << opponent.enemyCalculateMeleeDamage(player)
-					<< "\nYour Health: " << player.playerHealth << " / " << player.playerMaxHealth
+					<< "\nEnemy Health: "<< drawHealthBar(opponent.enemyHealth,opponent.enemyMaxHealth) << " " << opponent.enemyHealth << " / " << opponent.enemyMaxHealth
+					<< "\nEnemy Attack: "<< opponent.enemyCalculateMeleeDamage(player)
+					<< "\nYour Health: " << drawHealthBar(player.playerHealth, player.playerMaxHealth) << " " << player.playerHealth << " / " << player.playerMaxHealth
 				<< std::endl << "1) Attack" << " | Damage: " << player.calculateMeleeDamage(opponent.defense)
 				<< std::endl << "2) Defend"
 				<< std::endl << "3) Spells"
@@ -1723,7 +1853,7 @@ int main() {
 	items testitem;
 	spells spelltest;
 	character test1(0,0,0,0,0,0);
-	shop shoptest(spelltest, testitem, test1);
+	
 	test1.pickAttributes();
 	//clear();
 
@@ -1746,12 +1876,15 @@ int main() {
 	if (test1.getWisdom() >= 5) {
 	
 		std::cout << "\nUsing your intellect, you realize you can shoot sparks from your hands.\n";
-		spelltest.grantPlayerSpell(5);
+		
+		spelltest.grantPlayerSpell(5); 
 
 	}
 	enemy test;
 	test.enemySet(20, 20, 1, 4, 10, 20, "beebie", test1);
+	shop shoptest(spelltest, testitem, test1, test);
 	combatHandler combat1(test1, test, spelltest, testitem, shoptest);
+
 	while (test1.playerHealth > 0) {
 		battling = true;
 		intensity = 0;
