@@ -259,7 +259,7 @@ public:
 
 	};
 	int calculateMeleeDamage(int enemyDefense) {
-		float baseDamage = static_cast<int>((strength *(1 + intensity * 0.1))-static_cast<float>(enemyDefense/2));		
+		float baseDamage = static_cast<int>((strength *(1 + intensity * 0.1))-static_cast<float>(enemyDefense/1.4f));		
 		int minimumDamage = 1 + static_cast<int>(strength / 4.0f + faith/10.0f + wisdom/10.0f + luck/10.0f + dexterity/10.0f);
 		int damage = baseDamage * calcDamageVariance();
 		if (damage < minimumDamage) damage = minimumDamage;
@@ -408,7 +408,7 @@ public:
 			baseHealing = 7;
 			baseDamage = 0;
 			spellName = "Minor Heal";
-			attributePowerModifier = 0.9f;
+			attributePowerModifier = 0.98f;
 			scalingAttribute = '1'; // faith
 			spellSlotCost = 1;
 			spellPrice = 35;
@@ -429,7 +429,7 @@ public:
 			baseHealing = 15;
 			baseDamage = 0;
 			spellName = "Heal";
-			attributePowerModifier = 1.25f;
+			attributePowerModifier = 1.35f;
 			scalingAttribute = '1'; // faith
 			spellSlotCost = 2;
 			spellPrice = 65;
@@ -437,12 +437,30 @@ public:
 
 		case 7:
 			baseHealing = 3;
-			baseDamage = 10;
+			baseDamage = 9;
 			spellName = "Unholy Siphon";
-			attributePowerModifier = 1.25f;
+			attributePowerModifier = 1.28f;
 			scalingAttribute = '1'; // faith
 			spellSlotCost = 2;
 			spellPrice = 55;
+			break;
+		case 8:
+			baseHealing = 5;
+			baseDamage = 5;
+			spellName = "Lifetap";
+			attributePowerModifier = 0.10f;
+			scalingAttribute = '2'; // both
+			spellSlotCost = 1;
+			spellPrice = 15;
+			break;
+		case 9:
+			baseHealing = 0;
+			baseDamage = 10;
+			spellName = "Thunderbolt";
+			attributePowerModifier = 1.45f;
+			scalingAttribute = '0'; // wisdom
+			spellSlotCost = 2;
+			spellPrice = 45;
 			break;
 
 		default:
@@ -509,20 +527,20 @@ public:
 
 		case '0':
 			finalDamage = baseDamage + powerModifier(player);
-			finalDamage *= static_cast<int>((1 + intensity * 0.1));
+			finalDamage *= static_cast<float>((1 + intensity * 0.1));
 			return finalDamage;
 			break;
 		case '1':
 
 			finalDamage = baseDamage * powerModifier(player);
-			finalDamage *= static_cast<int>((1 + intensity * 0.172));
+			finalDamage *= static_cast<float>((1 + intensity * 0.172));
 			return finalDamage;
 			break;
 
 		case '2':
 
 			finalDamage = baseDamage + powerModifier(player);
-			finalDamage *= static_cast<int>((1 + intensity * 0.1));
+			finalDamage *= static_cast<float>((1 + intensity * 0.1));
 			return finalDamage;
 			break;
 
@@ -934,7 +952,7 @@ public:
 	} // this holds the data for items //stores all item data
 
 	char displayItemMenu(character& player, enemy& opponent) {
-
+		
 		if (itemsHeld.empty()) {
 			std::cout << "You don't have any items. \n";
 			return 'f';
@@ -1121,7 +1139,7 @@ private:
 	bool itemsGenerated = false;
 	bool spellsGenerated = false;
 	bool doneShopping = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -1139,16 +1157,86 @@ public:
 	}
 
 	void healChoiceMenu() {
+		int healingChoice;
 		int healingPrice = ((player.playerMaxHealth - player.playerHealth) / 3);
-		int spellSlotPrice =  4 * 1 * (player.level * 0.8);
+		int spellSlotPrice = 4 * 1 * (player.level * 0.8);
 		if (spellSlotPrice > 20) spellSlotPrice = 20;
+		int fullSpellSlotPrice = spellSlotPrice * (player.maximumSpellsAvailable - player.spellsAvailable);
 
 		std::cout << "-----Healing-----\n" <<
 			"1) Heal 3 HP: 1 Gold\n" <<
 			"2) Full Heal: " << healingPrice << " Gold\n" <<
 			"3) One spell slot: " << spellSlotPrice << " Gold\n" <<
-			"4) Full spell slots: " << spellSlotPrice * (player.maximumSpellsAvailable - player.spellsAvailable) << " Gold\n";
+			"4) Full spell slots: " << fullSpellSlotPrice << " Gold\n\n"
+			<< "Health: " << player.playerHealth << "/" << player.playerMaxHealth << "\n" 
+			<< "Spell Slots: " <<player.spellsAvailable << "/" << player.maximumSpellsAvailable << "\n"
+			<< "\nChoose a number 1-4\n";
 			
+		std::cin >> healingChoice;
+
+		handleInputFailure("\nInvalid input, healing cancelled.");
+		if (healingChoice > 4 || healingChoice < 1) {
+			std::cout << "\nChoose a number 1-4";
+		}
+		else {
+
+			switch(healingChoice){
+
+			case 1:
+				if (player.playerHealth < player.playerMaxHealth && player.gold > 0) {
+
+					player.playerHealth += 3;
+					if (player.playerHealth > player.playerMaxHealth) player.playerHealth = player.playerMaxHealth;
+					player.gold--;
+
+				}
+				else {
+					std::cout << "\nHealing unsuccessful. (Full health, or not enough gold)\n";
+				}
+				break;
+			case 2:
+				if (player.playerHealth < player.playerMaxHealth && player.gold >= healingPrice) {
+
+					player.playerHealth = player.playerMaxHealth;
+					
+					player.gold -= healingPrice;
+
+				}
+				else {
+					std::cout << "\nHealing unsuccessful. (Full health, or not enough gold)";
+				}
+				break;
+			case 3:
+				if (player.spellsAvailable < player.maximumSpellsAvailable && player.gold >= spellSlotPrice) {
+
+					player.spellsAvailable++;
+
+					player.gold -= spellSlotPrice;
+
+				}
+				else {
+					std::cout << "\nChanneling unsuccessful. (Full spell slots, or not enough gold)";
+				}
+				break;
+			case 4:
+				if (player.spellsAvailable < player.maximumSpellsAvailable && player.gold >= fullSpellSlotPrice) {
+
+					player.spellsAvailable = player.maximumSpellsAvailable;
+
+					player.gold -= fullSpellSlotPrice;
+
+				}
+				else {
+					std::cout << "\nChanneling unsuccessful. (Full spell slots, or not enough gold)";
+				}
+				break;
+				break;
+
+			}
+
+		}
+
+
 	}
 
 	void itemShopMenu(items& shopItem) {
@@ -1217,7 +1305,7 @@ public:
 		std::cout << "-----Buy Spells-----\n";
 		
 		
-		if(!spellsGenerated) while (spellsInShop.size() < 2) {
+		if(!spellsGenerated) while (spellsInShop.size() < 3) {
 
 			int randomSpell = rand() % availableSpells.size(); // gets a random spell from the spells available in the game
 			char spellId = availableSpells[randomSpell];
@@ -1257,6 +1345,7 @@ public:
 					player.gold -= shopSpell.spellPrice;
 					shopSpell.grantPlayerSpell(selectedSpellId);
 					std::cout << "Spell Purchased! You now know " << shopSpell.spellName << ".\n";
+					spellsInShop.erase(spellsInShop.begin() + (purchaseChoice - 1));
 				}
 				else {
 					std::cout << "Not enough gold.\n";
@@ -1473,7 +1562,7 @@ public:
 		randomAttack = rand() % (3 + player.level * 4) + 1;
 		randomDefense = rand() % (12 + player.level * 3) + 1;
 		randomXP = (randomHealth + randomAttack + randomDefense)/1.5;
-		randomGold = rand() % 8 + player.level * 2 + randomXP/20;
+		randomGold = (rand() % 8 + player.luck / 2) + player.level * 2 + randomXP/20 ;
 		randomName = "alfred " + std::to_string(rand() % 200);
 
 		opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack, randomGold, randomXP, randomName,player);
