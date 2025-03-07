@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <Windows.h>
 #include <ctime>
@@ -8,7 +7,8 @@
 #include <limits>
 #include <unordered_map>
 #include "startgame.h"
-#include <conio.h>
+#include <algorithm>
+
 
 int intensity = 0;
 int input = 0;
@@ -29,7 +29,7 @@ void clear() {
 		std::cout << "             \n\n\n\n\n";
 	}
 }
-//this is where i'll store the enemy stats, for easy editing
+
 struct EnemyStats {
 
 	int maxHealth;
@@ -42,6 +42,19 @@ struct EnemyStats {
 
 };
 
+struct statusEffect {
+
+	std::string name;
+	std::string actionName;
+	char statusId = '0';
+	char type = 'h';
+	unsigned short strengthValue = 0;
+	unsigned short duration = 0;
+	std::string buffTarget;
+
+
+};
+
 const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 
 	{"Snow Golem", {40, 12, 6, 10, 30, '1', 2}},
@@ -50,7 +63,7 @@ const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 	{"Living Armor", {80, 14, 6, 30, 100,'1', 5}},
 	{"Fear Monger", {90,12,12,40, 150,'3', 6}}
 };
-// end of enemy stats
+
 float calcDamageVariance() {
 
 	return 0.9f + (rand() % 21) / 100;
@@ -111,6 +124,9 @@ public:
 	void displayStats() {
 
 		std::cout << "Player Name: " << name << std::endl
+			<< "Level: " << level << "\n"
+			<< "Experience: " << experience << "/" << experienceToNext 
+
 			<< "\nGold: " << gold
 		 << "\nMax Health: " << playerMaxHealth << std::endl
 		 << "Current Health: " << playerHealth << std::endl
@@ -222,7 +238,7 @@ public:
 		defense = 1 + endurance * 2 + strength * 1 + (level*0.5);
 		temporaryDefense = defense;
 		magicDefense = faith * 3 + wisdom * 1 + luck * 1;
-		maximumSpellsAvailable = (faith / 5.0f + wisdom / 3.0f); // adds up the two variables and rounds down
+		maximumSpellsAvailable = (faith / 4.5f + wisdom / 2.7f); // adds up the two variables and rounds down
 		spellsAvailable = maximumSpellsAvailable;
 	}
 	void takeDamage(int damage) {
@@ -407,7 +423,26 @@ public:
 			spellPrice = 5;
 			baseHealing = 0;
 
+			break;
 
+		case 6:
+			baseHealing = 15;
+			baseDamage = 0;
+			spellName = "Heal";
+			attributePowerModifier = 1.25f;
+			scalingAttribute = '1'; // faith
+			spellSlotCost = 2;
+			spellPrice = 65;
+			break;
+
+		case 7:
+			baseHealing = 3;
+			baseDamage = 10;
+			spellName = "Unholy Siphon";
+			attributePowerModifier = 1.25f;
+			scalingAttribute = '1'; // faith
+			spellSlotCost = 2;
+			spellPrice = 55;
 			break;
 
 		default:
@@ -421,6 +456,7 @@ public:
 
 
 	}
+
 	float powerModifier(character& player) {
 		float modifier = 0;
 		switch (scalingAttribute) {
@@ -1036,24 +1072,42 @@ public:
 class statuseffects {
 private:
 
-	std::string name = "Bleed";
-	std::string actionName = "Bleeding";
-	char statusId = '0';
-	char type = 'h'; //h for healing over time, d for damage over time
-	unsigned short strengthValue = 0;
-	unsigned short duration = 0;
-	std::string buffTarget = "dexterity";
+	std::vector<statusEffect> playerStatuses; 
+	std::vector<statusEffect> enemyStatuses;
+
+	std::string defaultName = "Bleed";
+	std::string defaultActionName = "Bleeding"; // "You took 3 damage due to : Bleeding"
+	char defaultStatusId = '0';
+	char defaultType = 'h'; //h for healing over time, d for damage over time, b for buff, f for debuff
+	unsigned short defaultStrengthValue = 0;
+	unsigned short defaultDuration = 0;
+	std::string defaultBuffTarget = "dexterity";
+
+
 
 public:
 	character& player;
 	enemy& opponent;
 
-	void grantStatusEffect(){
-	
-
+	void grantStatusEffect(character& player,enemy& opponent,bool onPlayer, char statusId){
+		//dealing with vectors
+	//if on player true
+		//statuspushback.player
+	//if on player flase
+		//statuspushback.enemy
 
 	}
-
+	 
+	void tickStatus() {
+		// if turnsElapsed % 2 = 0
+			//for(statuses in player.statusEffects )
+				//do status effects on player
+				//duration - 1
+		// if turnsElapsed % 2 = 1
+			//for(statuses in opponent.statusEffects )
+				//do status effects on enemy
+				//duration - 1
+	}
 
 	
 
@@ -1067,7 +1121,7 @@ private:
 	bool itemsGenerated = false;
 	bool spellsGenerated = false;
 	bool doneShopping = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -1082,6 +1136,19 @@ public:
 	shop(spells& s, items& i, character& c) : shopSpell(s), shopItem(i), player(c){
 
 
+	}
+
+	void healChoiceMenu() {
+		int healingPrice = ((player.playerMaxHealth - player.playerHealth) / 3);
+		int spellSlotPrice =  4 * 1 * (player.level * 0.8);
+		if (spellSlotPrice > 20) spellSlotPrice = 20;
+
+		std::cout << "-----Healing-----\n" <<
+			"1) Heal 3 HP: 1 Gold\n" <<
+			"2) Full Heal: " << healingPrice << " Gold\n" <<
+			"3) One spell slot: " << spellSlotPrice << " Gold\n" <<
+			"4) Full spell slots: " << spellSlotPrice * (player.maximumSpellsAvailable - player.spellsAvailable) << " Gold\n";
+			
 	}
 
 	void itemShopMenu(items& shopItem) {
@@ -1215,7 +1282,7 @@ public:
 				<< "\nYou have " << player.gold << " Gold."
 				<< "\n1) Items"
 				<< "\n2) Spells"
-				<< "\n3) Heal" << "(" << healPrice << " gold)"
+				<< "\n3) Healer" 
 				<< "\n4) Check"
 				<< "\n5) Leave shop\n";
 
@@ -1241,16 +1308,17 @@ public:
 				break;
 			case 3: // handles player healing. All or nothing. I think i'll give you the ability to pick between healing spell slots and hp
 			{
-				if (player.gold >= healPrice) {
-					player.gold -= healPrice;
-					player.playerHealth = player.playerMaxHealth;
-					player.spellsAvailable = player.maximumSpellsAvailable;
-					setColor(2);
-					std::cout << "\nYou have been healed";
-					setColor(7);
-				}
-				else
-					std::cout << "\nNot enough gold";
+				healChoiceMenu();
+				//if (player.gold >= healPrice) {
+					//player.gold -= healPrice;
+					//player.playerHealth = player.playerMaxHealth;
+					//player.spellsAvailable = player.maximumSpellsAvailable;
+					//setColor(2);
+					//std::cout << "\nYou have been healed";
+					//setColor(7);
+				//}
+				//else
+				//	std::cout << "\nNot enough gold";
 				break;
 			}
 
@@ -1404,8 +1472,8 @@ public:
 		randomHealth = rand() % (28 + player.level * 4) + 4;
 		randomAttack = rand() % (3 + player.level * 4) + 1;
 		randomDefense = rand() % (12 + player.level * 3) + 1;
-		randomXP = (randomHealth + randomAttack + randomDefense)/2;
-		randomGold = rand() % 8 + player.level * 2;
+		randomXP = (randomHealth + randomAttack + randomDefense)/1.5;
+		randomGold = rand() % 8 + player.level * 2 + randomXP/20;
 		randomName = "alfred " + std::to_string(rand() % 200);
 
 		opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack, randomGold, randomXP, randomName,player);
