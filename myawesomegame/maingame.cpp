@@ -7,6 +7,8 @@
 #include <vector>
 #include <limits>
 #include <unordered_map>
+#include "startgame.h"
+#include <conio.h>
 
 int intensity = 0;
 int input = 0;
@@ -16,6 +18,17 @@ int diceRoll;
 int enemyRoll;
 int turnsElapsed = 0;
 int roundsPassed = 0;
+int roundsNeeded = 2;
+
+void clear() {
+	// CSI[2J clears screen, CSI[H moves the cursor to top-left corner
+	std::cout << "\x1B[2J\x1B[H";
+	int b = 0;
+	while (b < 100, b++) {
+
+		std::cout << "             \n\n\n\n\n";
+	}
+}
 //this is where i'll store the enemy stats, for easy editing
 struct EnemyStats {
 
@@ -58,6 +71,7 @@ void setColor(int color) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 }
 
+
 class character {
 
 private:
@@ -90,6 +104,9 @@ public:
 	}
 	int getFaith() {
 		return faith;
+	}
+	int getWisdom() {
+		return wisdom;
 	}
 	void displayStats() {
 
@@ -195,15 +212,17 @@ public:
 			updateCharacterStats();
 			playerHealth = playerMaxHealth;
 		}
+		clear();
+		
 		std::cout << "Attribute points assigned.\n";
 	}
 	void updateCharacterStats() {
 
-		playerMaxHealth = 10 + 2*(level-1) + endurance * 3;
-		defense = 0 + endurance * 2 + strength * 1 + (level*0.5);
+		playerMaxHealth = 10 + 3*(level-1) + endurance * 3;
+		defense = 1 + endurance * 2 + strength * 1 + (level*0.5);
 		temporaryDefense = defense;
-		magicDefense = faith * 2 + wisdom * 1 + luck * 1;
-		maximumSpellsAvailable = (faith / 6 + wisdom / 3); // adds up the two variables and rounds down
+		magicDefense = faith * 3 + wisdom * 1 + luck * 1;
+		maximumSpellsAvailable = (faith / 5.0f + wisdom / 3.0f); // adds up the two variables and rounds down
 		spellsAvailable = maximumSpellsAvailable;
 	}
 	void takeDamage(int damage) {
@@ -224,8 +243,8 @@ public:
 
 	};
 	int calculateMeleeDamage(int enemyDefense) {
-		int baseDamage = static_cast<int>((strength *(1 + intensity * 0.1))-static_cast<float>(enemyDefense/2));		
-		int minimumDamage = 1 + strength / 4;
+		float baseDamage = static_cast<int>((strength *(1 + intensity * 0.1))-static_cast<float>(enemyDefense/2));		
+		int minimumDamage = 1 + static_cast<int>(strength / 4.0f + faith/10.0f + wisdom/10.0f + luck/10.0f + dexterity/10.0f);
 		int damage = baseDamage * calcDamageVariance();
 		if (damage < minimumDamage) damage = minimumDamage;
 		
@@ -238,7 +257,7 @@ public:
 		if (critChance > 93) critChance = 93;
 		rolledNumber = rand() % 100;
 		bool criticalHit = (critChance > rolledNumber);
-		std::cout << std::endl << "Roll: " << rolledNumber;
+		std::cout << std::endl << "Roll: " << rolledNumber << "(<" << critChance << " needed) \n";
 		return criticalHit;
 	}
 
@@ -271,7 +290,7 @@ public:
 
 	}
 	
-	char displaySpellMenu() {
+	char displaySpellMenu(character& player) {
 
 		if (spellsKnown.empty()) {
 
@@ -282,10 +301,10 @@ public:
 			int i = 1;
 			std::cout << "-----Spells----- \n";
 			for (char spellId : spellsKnown) {
-				
+
 				id = spellId;
 				updateSpell(spellId);
-				std::cout << i << ": " << spellName << " | Cost: " << spellSlotCost << std::endl;
+				std::cout << i << ": " << spellName << " | Cost: " << spellSlotCost  << " | Damage: " << calculateSpellPower(player,true) << std::endl;
 				i++;
 
 			}
@@ -294,10 +313,10 @@ public:
 
 				std::cout << "Type the number of the spell you'd like to cast, or anything else to cancel casting. \n";
 
-				std::cin >> input; 
+				std::cin >> input;
 
 
-				if (std::cin.fail() || input < 1 || input > spellsKnown.size() ) {
+				if (std::cin.fail() || input < 1 || input > spellsKnown.size()) {
 					std::cout << "Spell casting cancelled. \n";
 					std::cin.clear();
 					std::cin.ignore(10000, '\n');
@@ -329,8 +348,8 @@ public:
 
 		case 0:
 			baseHealing = 0;
-			baseDamage = 3;
-			attributePowerModifier = 1.55f;
+			baseDamage = 4;
+			attributePowerModifier = 1.6f;
 			spellName = "Zap";
 			scalingAttribute = '0';
 			spellSlotCost = 1;
@@ -338,8 +357,8 @@ public:
 			break;
 		case 1:
 			baseHealing = 0;
-			baseDamage = 6;
-			attributePowerModifier = 1.4f;
+			baseDamage = 5;
+			attributePowerModifier = 1.32f;
 			spellName = "Light Ray";
 			scalingAttribute = '1';
 			spellSlotCost = 1;
@@ -360,9 +379,9 @@ public:
 
 		case 3:
 			baseHealing = 0;
-			baseDamage = 22;
+			baseDamage = 24;
 			spellName = "Fireball";
-			attributePowerModifier = 0.8f;
+			attributePowerModifier = 1.05f;
 			scalingAttribute = '0'; // wisdom
 			spellSlotCost = 2;
 			spellPrice = 40;
@@ -370,13 +389,24 @@ public:
 			break;
 
 		case 4:
-			baseHealing = 6;
+			baseHealing = 7;
 			baseDamage = 0;
 			spellName = "Minor Heal";
-			attributePowerModifier = 0.8f;
+			attributePowerModifier = 0.9f;
 			scalingAttribute = '1'; // faith
 			spellSlotCost = 1;
 			spellPrice = 35;
+			break;
+
+		case 5:
+			baseDamage = 3;
+			spellName = "Spark";
+			attributePowerModifier = 0.33f;
+			scalingAttribute = '2';
+			spellSlotCost = 1;
+			spellPrice = 5;
+			baseHealing = 0;
+
 
 			break;
 
@@ -418,23 +448,27 @@ public:
 		return modifier;
 	}
 
-	int calculateSpellPower(character& player) {
+	int calculateSpellPower(character& player, bool display) {
 		// this code decides the spell damage based off the scaling types. 0 for wisdom, 1 for faith, 2 for both.
-		player.spellsAvailable -= spellSlotCost;
+		if(!display) player.spellsAvailable -= spellSlotCost;
 		int finalDamage = 0;
 		int finalHealing = baseHealing + powerModifier(player);
 		int originalPlayerHealth = player.playerHealth;
+		if (!display) {
+			if (baseHealing > 0 && player.playerHealth != player.playerMaxHealth) {
 
-		if (finalHealing > 0 && player.playerHealth != player.playerMaxHealth) {
-			
 			player.playerHealth += finalHealing;
-			std::cout << "\nYou gain " << player.playerHealth - originalPlayerHealth << " Health Points!\n";
+
 			if (player.playerHealth > player.playerMaxHealth)
 				player.playerHealth = player.playerMaxHealth;
+
+			std::cout << "\nYou gain " << player.playerHealth - originalPlayerHealth << " Health Points!\n";
+			}
+			else {
+				if (baseDamage == 0)
+					player.spellsAvailable += spellSlotCost;
 		}
-		else {
-			player.spellsAvailable += spellSlotCost;
-		}
+	}
 		switch (scalingAttribute) {
 
 		case '0':
@@ -445,7 +479,7 @@ public:
 		case '1':
 
 			finalDamage = baseDamage * powerModifier(player);
-			finalDamage *= static_cast<int>((1 + intensity * 0.162));
+			finalDamage *= static_cast<int>((1 + intensity * 0.172));
 			return finalDamage;
 			break;
 
@@ -465,6 +499,7 @@ public:
 		
 		
 	}
+
 };
 
 class enemy {
@@ -533,14 +568,15 @@ public:
 	};
 
 	void takeDamage(int damage){
+		setColor(3);
 		std::cout << std::endl << "Enemy took " << damage << " damage!" << std::endl;
 		enemyHealth -= damage;
-
+		setColor(7);
 	}
 
 	float enemyCalculateMeleeDamage(character& player) {
 
-		float baseDamage = (attack * (1 + static_cast<float>(intensity) / 8)) - player.defense/2;
+		float baseDamage = (attack * (1 + static_cast<float>(intensity) / 8)) - player.defense/3;
 		float variance = 0.9f + (rand() % 21) / 100.0;
 		int finalDamage = static_cast<int>(baseDamage * variance);
 		if (finalDamage< 1) finalDamage = 1;
@@ -566,8 +602,9 @@ public:
 	void basicEnemyAi(character& player){
 		if (battling)  {
 			diceRoll = rand() % 4;
+			setColor(13);
 			switch (diceRoll) {
-
+				
 			case 0: {
 				
 				player.takeDamage(enemyCalculateMeleeDamage(player));
@@ -576,23 +613,24 @@ public:
 			}
 			case 1:
 				//defend
-				std::cout << "\nEnemy defends, you'll do less melee damage ";
+				std::cout << "\nEnemy defends, you'll do less melee damage\n";
 				tempDefense = defense;
 				defense = defense * 1.33;
 				turnsElapsed++;
 				break;
 			case 2:
-				std::cout << "\nThe enemy  turns up the heat! Intensity + 3";
+				std::cout << "\nThe enemy  turns up the heat! Intensity + 3\n";
 				intensity += 3;
 				turnsElapsed++;
 				//do nothing
 				break;
 			case 3:
-				std::cout << "\nenemy does nothing";
+				std::cout << "\nEnemy does nothing.\n";
 				//also do nothing
 				turnsElapsed++;
 				break;
 			}
+			setColor(7);
 		}
 
 	}
@@ -619,7 +657,7 @@ private:
 	std::vector<char> itemsHeld;
 	int spellSlotsRestored = 0;
 	friend class shop;
-	int input;
+	int input = 0;
 
 public:
 	
@@ -688,8 +726,8 @@ public:
 			itemDamage = 7;
 			scalingType = "both";
 			itemType = "damage";
-			intensityScaleFactor = 0.06f;
-			attributeScalingFactor = 0.18f;
+			intensityScaleFactor = 0.07f;
+			attributeScalingFactor = 0.20f;
 			attributeScale = "dexterity";
 			itemQuantity = 2;
 			itemHealingPower = 0;
@@ -766,7 +804,7 @@ public:
 			attributeScale = "dexterity";
 			itemType = "damage";
 			itemDamage = 10;
-			attributeScalingFactor = 0.13f;
+			attributeScalingFactor = 0.15f;
 			
 
 			break;
@@ -805,7 +843,7 @@ public:
 			intensityScaleFactor = 0.0f;
 			itemHealingPower = 0;
 			itemCost = 12;
-			intensityChange = 4;
+			intensityChange = 5;
 			break;
 		case 12:
 			itemName = "Calm Feather";
@@ -815,7 +853,7 @@ public:
 			intensityScaleFactor = 0.0f;
 			itemHealingPower = 0;
 			itemCost = 10;
-			intensityChange = -4;
+			intensityChange = -5;
 			break;
 		case 13:
 			itemName = "Grand Hammer";
@@ -825,7 +863,7 @@ public:
 			intensityScaleFactor = 0.0f;
 			itemHealingPower = 0;
 			itemCost = 25;
-			intensityChange = -6;
+			intensityChange = -7;
 			break;
 		case 14:
 			itemName = "Escalating Dagger";
@@ -836,7 +874,17 @@ public:
 			itemType = "damage";
 			itemCost = 8;
 			intensityChange = 1;
-			attributeScalingFactor = 0.15f;
+			attributeScalingFactor = 0.17f;
+			break;
+
+		case 15:
+			itemName = "Firebomb";
+			itemDamage = 15;
+			scalingType = "intensity";
+			itemType = "damage";
+			intensityScaleFactor = 0.05f;
+			intensityChange = 2;
+			itemCost = 12;
 			break;
 		default:
 			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
@@ -847,7 +895,7 @@ public:
 		}
 
 
-	} // this holds the data for items
+	} // this holds the data for items //stores all item data
 
 	char displayItemMenu(character& player, enemy& opponent) {
 
@@ -861,7 +909,9 @@ public:
 			for (char itemId : itemsHeld) {
 				id = itemId;
 				updateItem(itemId);
-				std::cout << i << ": " << itemName << std::endl;
+				std::cout << i << ": " << itemName <<"\n";
+				if (itemType == "damage")
+					std::cout << "Base Damage : " << itemDamage << "\n";
 				i++;
 			}
 			std::cout << "---------------\n";
@@ -983,6 +1033,32 @@ public:
 
 };
 
+class statuseffects {
+private:
+
+	std::string name = "Bleed";
+	std::string actionName = "Bleeding";
+	char statusId = '0';
+	char type = 'h'; //h for healing over time, d for damage over time
+	unsigned short strengthValue = 0;
+	unsigned short duration = 0;
+	std::string buffTarget = "dexterity";
+
+public:
+	character& player;
+	enemy& opponent;
+
+	void grantStatusEffect(){
+	
+
+
+	}
+
+
+	
+
+};
+
 class shop {
 
 private:
@@ -991,7 +1067,7 @@ private:
 	bool itemsGenerated = false;
 	bool spellsGenerated = false;
 	bool doneShopping = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -1012,9 +1088,9 @@ public:
 		
 		std::cout << "-----Buy Items-----\n";
 		
-		for (int i = 1; i <= 4; i++) { 
+		for (int i = 1; i <= objectsAvailable; i++) { 
 				
-			int randomItemId = rand() % 15; //generates a random item
+			int randomItemId = rand() % 16; //generates a random item
 			bool isPair = (rand() % 100 < 20);
 			if(!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
 		
@@ -1130,7 +1206,9 @@ public:
 
 		int shopChoice;
 		doneShopping = false;
-		std::cout <<  "Welcome to the shop!";
+		setColor(4);
+		std::cout <<  "--Welcome to the shop!--\n";
+		setColor(7);
 		while (!doneShopping && player.playerHealth > 0) {
 			int healPrice = ((player.playerMaxHealth - player.playerHealth) / 3 + 4 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level*0.8);
 			std::cout
@@ -1167,7 +1245,9 @@ public:
 					player.gold -= healPrice;
 					player.playerHealth = player.playerMaxHealth;
 					player.spellsAvailable = player.maximumSpellsAvailable;
+					setColor(2);
 					std::cout << "\nYou have been healed";
+					setColor(7);
 				}
 				else
 					std::cout << "\nNot enough gold";
@@ -1324,7 +1404,7 @@ public:
 		randomHealth = rand() % (28 + player.level * 4) + 4;
 		randomAttack = rand() % (3 + player.level * 4) + 1;
 		randomDefense = rand() % (12 + player.level * 3) + 1;
-		randomXP = rand() % (27 + player.level*3) + player.level*3; 
+		randomXP = (randomHealth + randomAttack + randomDefense)/2;
 		randomGold = rand() % 8 + player.level * 2;
 		randomName = "alfred " + std::to_string(rand() % 200);
 
@@ -1333,8 +1413,11 @@ public:
 	};
 
 	void initiateCombat() {
-		
-		std::cout << "\nBattle Start\n";
+		setColor(7);
+		std::cout << "\n---------Battle Start---------\n";
+		setColor(15);
+		std::cout << "\nBattle " << roundsPassed + 1 << "/" << roundsNeeded << "\n";
+		setColor(7);
 		if (enemyRoll == 3)std::cout << "\n Special Encounter: " << opponent.name << ".";
 		while (battling)  {
 
@@ -1345,8 +1428,9 @@ public:
 				
 				std::cout
 					<< "\nEnemy Health: " << opponent.enemyHealth << " / " << opponent.enemyMaxHealth
+					<< "\nEnemy Attack: " << opponent.enemyCalculateMeleeDamage(player)
 					<< "\nYour Health: " << player.playerHealth << " / " << player.playerMaxHealth
-				<< std::endl << "1) Attack"
+				<< std::endl << "1) Attack" << " | Damage: " << player.calculateMeleeDamage(opponent.defense)
 				<< std::endl << "2) Defend"
 				<< std::endl << "3) Spells"
 				<< std::endl << "4) Items"
@@ -1371,6 +1455,8 @@ public:
 			switch (input) {
 
 			case 1: {  //keep these brackets
+				
+				std::cout << "\nYou swing at the enemy... \n";
 				
 				int damage = player.calculateMeleeDamage(opponent.defense);
 				
@@ -1399,12 +1485,12 @@ public:
 			case 3:
 			{
 				std::cout <<"\nSpells Available: "<< player.spellsAvailable << "\n";
-				char spellUsed = spell.displaySpellMenu();
+				char spellUsed = spell.displaySpellMenu(player);
 				if (spellUsed == 'f') break;  //f is the default 
 				spell.updateSpell(spellUsed);
 
 				if (spell.spellSlotCost <= player.spellsAvailable) {
-					int spellDamage = spell.calculateSpellPower(player);
+					int spellDamage = spell.calculateSpellPower(player, false);
 					if (spellDamage > 0)
 					opponent.takeDamage(spellDamage);
 					
@@ -1474,21 +1560,24 @@ public:
 
 
 int main() {
-
+	startMenu();
 	srand(static_cast<unsigned int>(time(NULL)));
-	enemy test;
+
 	items testitem;
 	spells spelltest;
 	character test1(0,0,0,0,0,0);
 	shop shoptest(spelltest, testitem, test1);
 	test1.pickAttributes();
+	//clear();
+
 	if (test1.getDexterity() >= 5) {
 		testitem.grantPlayerItem(1); 
 		testitem.grantPlayerItem(1);
-		std::cout << "\nYour dexterity grants you 2 free throwing daggers.\n";
+		testitem.grantPlayerItem(1);
+		std::cout << "\nYour dexterity grants you a free trio of throwing daggers.\n";
 
 	}
-	if (test1.getFaith() >= 6) {
+	if (test1.getFaith() >= 5) {
 		testitem.grantPlayerItem(10);
 		testitem.grantPlayerItem(10);
 		testitem.grantPlayerItem(10);
@@ -1496,6 +1585,14 @@ int main() {
 		spelltest.grantPlayerSpell(4);
 
 	}
+
+	if (test1.getWisdom() >= 5) {
+	
+		std::cout << "\nUsing your intellect, you realize you can shoot sparks from your hands.\n";
+		spelltest.grantPlayerSpell(5);
+
+	}
+	enemy test;
 	test.enemySet(20, 20, 1, 4, 10, 20, "beebie", test1);
 	combatHandler combat1(test1, test, spelltest, testitem, shoptest);
 	while (test1.playerHealth > 0) {
@@ -1503,8 +1600,11 @@ int main() {
 		intensity = 0;
 		turnsElapsed = 0;
 		combat1.initiateCombat();
-		shoptest.shopMenu();
-		
+		roundsPassed++;
+		if (roundsPassed >= roundsNeeded) {
+			roundsPassed = 0;
+			shoptest.shopMenu();
+		}
 	}
 	
 	
