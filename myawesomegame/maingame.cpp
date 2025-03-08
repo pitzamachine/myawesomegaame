@@ -303,6 +303,8 @@ public:
 	short spellSlotCost = 0;
 	short spellPrice = 0;
 	int baseHealing = 0;
+	std::string statusEffect = ""; 
+	float statusApplyChance = 0.05;
 	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both, 3 is neither
 	std::string spellName = "default";
 	std::vector<char> spellsKnown;
@@ -722,6 +724,7 @@ private:
 	int intensityChange = 0; // + = more intense, - = less intense
 	std::vector<char> itemsHeld;
 	int spellSlotsRestored = 0;
+	float itemVariance = 1.0f;
 	friend class shop;
 	int input = 0;
 
@@ -757,6 +760,9 @@ public:
 		else if (attribute == "faith") {
 			return player.faith;
 		}
+		else if (attribute == "luck") {
+			return player.luck;
+		}
 
 		// Return a default value if the attribute doesn't exist
 		static int defaultAttr = 0;
@@ -771,8 +777,9 @@ public:
 	}
 
 	void updateItem(char itemId) {
-		
+		itemVariance = 1.0f;
 		itemQuantity = 1;
+		spellSlotsRestored = 0;
 		intensityChange = 0;
 		switch (itemId) {
 
@@ -852,8 +859,8 @@ public:
 		case 7:
 
 			itemName = "Manapowder";
-			itemHealingPower = 5;
-			itemCost = 40;
+			itemHealingPower = 7;
+			itemCost = 35;
 			scalingType = "static";
 			itemType = "healing";
 			itemDamage = 0;
@@ -879,12 +886,12 @@ public:
 
 			itemName = "Boulder";
 			itemHealingPower = 0;
-			itemCost = 25;
+			itemCost = 20;
 			scalingType = "attribute";
 			attributeScale = "strength";
 			itemType = "damage";
-			itemDamage = 9;
-			attributeScalingFactor = 0.19f;
+			itemDamage = 10;
+			attributeScalingFactor = 0.20f;
 
 			break;
 			
@@ -952,6 +959,40 @@ public:
 			intensityChange = 2;
 			itemCost = 12;
 			break;
+
+		case 16:
+			itemName = "Wonder Ball";
+			itemDamage = 5;
+			scalingType = "intensity";
+			itemType = "damage";
+			intensityScaleFactor = 0.07f;
+			itemHealingPower = 5;
+			intensityChange = 5;
+			itemCost = 20;
+			break;
+		case 17:
+			itemName = "Wonder Ball-";
+			itemDamage = 2;
+			scalingType = "intensity";
+			itemType = "damage";
+			intensityScaleFactor = 0.03f;
+			itemHealingPower = 7;
+			intensityChange = 2;
+			itemCost = 12;
+			break;
+		case 18:
+			itemName = "Peculiar Object";
+			itemDamage = 2;
+			scalingType = "both";
+			itemType = "damage";
+			itemVariance = 3;
+			intensityScaleFactor = 0.02f;
+			attributeScalingFactor = 0.2f;
+			itemHealingPower = 0;
+			attributeScale = "luck";
+			intensityChange = 0;
+			itemCost = 10;
+			break;
 		default:
 			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
 			break;
@@ -1010,15 +1051,28 @@ public:
 		updateItem(itemUsed);
 
 		if (intensityChange != 0) {
-			if ((intensity + intensityChange) < 0) {
+			int newIntensity = intensity + intensityChange;
+			if (newIntensity < 0) {
 				std::cout << "\nThings can't get any calmer.\n";
-			}else
-				intensity += intensityChange;
-			std::cout << "\nThe world grows more restless\n";
+				intensity = 0;
+			}
+			else
+			{
+				intensity = newIntensity;
+				if (intensityChange > 0) {
+					std::cout << "\nThe world grows more restless\n";
+				}
+				else if (intensityChange < 0) {
+					std::cout << "\nThe world calms..\n";
+				}
+			}
+				
+
 		}
+
 		if (itemType == "healing" && player.playerHealth < player.playerMaxHealth) {
 			player.playerHealth += itemHealingPower; // you should replace this with a player.heal function
-			std::cout << "\nYou gain " << itemHealingPower << " Health Points!";
+			std::cout << "\nYou gain " << itemHealingPower << " Health Points!\n";
 			itemsHeld.erase(itemsHeld.begin() + (input - 1));
 
 			if (spellSlotsRestored > 0) {
@@ -1063,6 +1117,10 @@ public:
 				itemsHeld.erase(itemsHeld.begin() + (input - 1));
 				break;
 
+			}
+			if (itemVariance != 1.0) {
+
+				finalItemDamage *= rand() % static_cast<int>((itemVariance + player.luck/2));
 			}
 			std::cout << "Your item does " << finalItemDamage << " Damage!";
 
@@ -1120,6 +1178,13 @@ public:
 	enemy& opponent;
 
 	void grantStatusEffect(character& player,enemy& opponent,bool onPlayer, char statusId){
+		statusEffect newEffect;
+		if (onPlayer) {
+			playerStatuses.push_back(newEffect);
+		}
+		else {
+			enemyStatuses.push_back(newEffect);
+		}
 		//dealing with vectors
 	//if on player true
 		//statuspushback.player
@@ -1260,7 +1325,7 @@ public:
 		
 		for (int i = 1; i <= objectsAvailable; i++) { 
 				
-			int randomItemId = rand() % 16; //generates a random item
+			int randomItemId = rand() % 19; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
 			bool isPair = (rand() % 100 < 20);
 			if(!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
 		
@@ -1596,11 +1661,12 @@ public:
 	void levelUpHandler() {
 		int originalLevel = player.level;
 		while (player.experience >= player.experienceToNext) {
+			player.level++;
 			setColor(2);
 			std::cout << "You leveled up to level " << player.level << ".\n";
 			setColor(7);
 			player.experience -= player.experienceToNext;
-			player.level++;
+			
 			player.experienceToNext *= 1.33;
 			player.attributePoints += 3;
 
