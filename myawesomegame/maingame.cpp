@@ -21,6 +21,13 @@ int turnsElapsed = 0;
 int roundsPassed = 0;
 int roundsNeeded = 2;
 
+//bonus stats
+unsigned short bonusHealth = 0;
+unsigned short bonusIntensity = 0;
+
+
+
+
 std::string drawHealthBar(int currentHP, int maxHP) { 
 	int segments = std::round((static_cast<float>(currentHP) / maxHP) * 9);
 	segments = std::max(0, std::min(9, segments));
@@ -124,6 +131,10 @@ public:
 	unsigned short maximumSpellsAvailable = 0;
 
 
+	int getEndurance() {
+		return endurance;
+	}
+
 	int getDexterity() {
 		return dexterity;
 	}
@@ -132,6 +143,12 @@ public:
 	}
 	int getWisdom() {
 		return wisdom;
+	}
+	int getLuck() {
+		return luck;
+	}
+	void grantGold(int amount) {
+		gold += amount;
 	}
 	void displayStats() {
 
@@ -246,7 +263,7 @@ public:
 	}
 	void updateCharacterStats() {
 
-		playerMaxHealth = 10 + 3*(level-1) + endurance * 3;
+		playerMaxHealth = 10 + bonusHealth + 3*(level-1) + endurance * 3;
 		defense = 1 + endurance * 2 + strength * 1 + (level*0.5);
 		temporaryDefense = defense;
 		magicDefense = faith * 3 + wisdom * 1 + luck * 1;
@@ -292,6 +309,7 @@ public:
 	friend class combatHandler;
 	friend class spells;
 	friend class items;
+	friend class statuseffects;
 };
 
 class spells {
@@ -627,6 +645,7 @@ public:
 			goldDropped = gold;
 			experienceWorth = exp;
 			name = ename;
+			tempDefense = defense;
 
 		}
 
@@ -646,8 +665,9 @@ public:
 
 		float baseDamage = (attack * (1 + static_cast<float>(intensity) / 8)) - player.defense/3;
 		float variance = 0.9f + (rand() % 21) / 100.0;
+		int minimumDamage = (1 + attack / 6);
 		int finalDamage = static_cast<int>(baseDamage * variance);
-		if (finalDamage< 1) finalDamage = 1;
+		if (finalDamage<minimumDamage) finalDamage = minimumDamage;
 		return finalDamage;
 	}; 
 
@@ -705,6 +725,90 @@ public:
 
 };
 
+
+
+class statuseffects {
+private:
+
+	std::vector<statusEffect> playerStatuses; 
+	std::vector<statusEffect> enemyStatuses;
+
+	std::string defaultName = "Bleed";
+	std::string defaultActionName = "Bleeding"; // "You took 3 damage due to : Bleeding"
+	char defaultStatusId = '0';
+	char defaultType = 'h'; //h for healing over time, d for damage over time, b for buff, f for debuff
+	unsigned short defaultStrengthValue = 0;
+	unsigned short defaultDuration = 0;
+	std::string defaultBuffTarget = "dexterity";
+	
+
+
+public:
+	friend character;
+	character& player;
+	enemy& opponent;
+
+
+	statuseffects(character& p, enemy& e) : player(p), opponent(e) {}
+
+	void grantStatusEffect(character& player,enemy& opponent,bool onPlayer, char statusId){
+		statusEffect newEffect;
+		switch (statusId) {
+		case '0':
+			newEffect.name = "Strength Boost";
+			newEffect.actionName = "Feeling Strong";
+			newEffect.statusId = '0';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 3;
+			newEffect.duration = 3;
+			newEffect.buffTarget = "strength";
+			break;
+
+		default:
+			break;
+		}
+		if (onPlayer) {
+			playerStatuses.push_back(newEffect);
+		}
+		else {
+			enemyStatuses.push_back(newEffect);
+		}
+		//dealing with vectors
+	//if on player true
+		//statuspushback.player
+	//if on player flase
+		//statuspushback.enemy
+
+	}
+	/*
+	void tickStatus(character& player, enemy& opponent) {
+		if (turnsElapsed % 2 == 0) { 
+			for (auto it = playerStatuses.begin(); it != playerStatuses.end();) {
+				if (it->type == 'b' && it->buffTarget == "strength") {
+					std::cout << "\n" << it->actionName << ": +" << it->strengthValue << " strength!";
+					player.strength += it->strengthValue; 
+				}
+				it->duration--;
+				if (it->duration <= 0) {
+					if (it->type == 'b' && it->buffTarget == "strength") player.strength -= it->strengthValue; // Revert
+					it = playerStatuses.erase(it);
+				}
+				else ++it;
+			}
+		}
+			//for(statuses in player.statusEffects )
+				//do status effects on player
+				//duration - 1
+		// if turnsElapsed % 2 = 1
+			//for(statuses in opponent.statusEffects )
+				//do status effects on enemy
+				//duration - 1
+	}
+	*/
+	
+
+};
+
 class items {
 
 private:
@@ -725,11 +829,19 @@ private:
 	std::vector<char> itemsHeld;
 	int spellSlotsRestored = 0;
 	float itemVariance = 1.0f;
+	int itemBecomes = 0;
+	char statusEffectIdGiven = 0;
+	bool hasStatus = false;
+	bool itemTransforms = false;
+	bool canRefill = false;
 	friend class shop;
 	int input = 0;
 
 public:
-	
+	statuseffects& status;
+
+	items(statuseffects& st) : status(st) {}
+
 	const std::unordered_map<std::string, int> scalingTypeMap = {
 	{"static", 0},
 	{"intensity", 1},
@@ -776,14 +888,32 @@ public:
 
 	}
 
-	void updateItem(char itemId) {
+	void updateItem(char itemId){
+		itemHealingPower = 0;
+		hasStatus = false;
+		statusEffectIdGiven = 0;
 		itemVariance = 1.0f;
 		itemQuantity = 1;
 		spellSlotsRestored = 0;
 		intensityChange = 0;
+		itemTransforms = false;
+		canRefill = false;
 		switch (itemId) {
 
-			
+
+		case -1:
+			itemName = "Bowl";
+			itemDamage = 5;
+			scalingType = "attribute";
+			itemType = "damage";
+			attributeScale = "dexterity";
+			attributeScalingFactor = 0.1;
+			intensityScaleFactor = 0;
+			itemHealingPower = 0;
+			canRefill = true;
+			itemBecomes = 19; //bowl of soup
+			itemCost = 3;
+			break;
 
 		case 0:
 			itemName = "Rock";
@@ -878,7 +1008,7 @@ public:
 			itemType = "damage";
 			itemDamage = 10;
 			attributeScalingFactor = 0.15f;
-			
+
 
 			break;
 
@@ -894,7 +1024,7 @@ public:
 			attributeScalingFactor = 0.20f;
 
 			break;
-			
+
 		case 10:
 
 			itemName = "Prayer Bead";
@@ -982,18 +1112,51 @@ public:
 			break;
 		case 18:
 			itemName = "Peculiar Object";
-			itemDamage = 2;
+			itemDamage = 1;
+			itemQuantity = 3;
 			scalingType = "both";
 			itemType = "damage";
 			itemVariance = 3;
 			intensityScaleFactor = 0.02f;
-			attributeScalingFactor = 0.2f;
+			attributeScalingFactor = 0.3f;
 			itemHealingPower = 0;
 			attributeScale = "luck";
 			intensityChange = 0;
 			itemCost = 10;
 			break;
+		case 19:
+			itemName = "Bowl of soup";
+			itemDamage = 0;
+			itemQuantity = 1;;
+			scalingType = "both";
+			itemType = "healing";
+			itemVariance = 0;
+			intensityScaleFactor = 0.0f;
+			attributeScalingFactor = 0.0f;
+			itemHealingPower = 10;
+			attributeScale = "static";
+			itemBecomes = -1;
+			intensityChange = 0;
+			itemTransforms = true;
+			itemCost = 9;
+			break;
+		case 20:
+			itemName = "Bowl of Strength Potion";
+			itemDamage = 0;
+			scalingType = "attribute";
+			itemType = "buff";
+			statusEffectIdGiven = 0;
+			attributeScalingFactor = 0.0f;
+			intensityScaleFactor = 0.0f;
+			itemHealingPower = 0;
+			intensityChange = 0;
+			itemBecomes = -1;
+			itemTransforms = true;
+			itemCost = 16;
+
+			break;
 		default:
+
 			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
 			break;
 
@@ -1005,7 +1168,7 @@ public:
 	} // this holds the data for items //stores all item data
 
 	char displayItemMenu(character& player, enemy& opponent) {
-		
+
 		if (itemsHeld.empty()) {
 			std::cout << "You don't have any items. \n";
 			return 'f';
@@ -1016,9 +1179,11 @@ public:
 			for (char itemId : itemsHeld) {
 				id = itemId;
 				updateItem(itemId);
-				std::cout << i << ": " << itemName <<"\n";
+				std::cout << i << ": " << itemName << "\n";
 				if (itemType == "damage")
 					std::cout << "Base Damage : " << itemDamage << "\n";
+				if (itemType == "healing")
+					std::cout << "Base Healing : " << itemHealingPower << "\n";
 				i++;
 			}
 			std::cout << "---------------\n";
@@ -1026,7 +1191,7 @@ public:
 			if (battling) {
 				std::cout << "Type the number of the item you'd like to use, or anything else to cancel. \n";
 
-				
+
 				std::cin >> input;
 
 				if (std::cin.fail() || input < 1 || input > itemsHeld.size()) {
@@ -1037,10 +1202,10 @@ public:
 				}
 
 				char usedItem = itemsHeld[input - 1];
-				
+
 				useItem(usedItem, player, opponent);
 				intensity++;
-				
+
 			}
 		}
 
@@ -1066,13 +1231,14 @@ public:
 					std::cout << "\nThe world calms..\n";
 				}
 			}
-				
+
 
 		}
 
 		if (itemType == "healing" && player.playerHealth < player.playerMaxHealth) {
-			player.playerHealth += itemHealingPower; // you should replace this with a player.heal function
-			std::cout << "\nYou gain " << itemHealingPower << " Health Points!\n";
+			int totalHealing = itemHealingPower * (1 + player.endurance / 25);
+			player.playerHealth += totalHealing; // you should replace this with a player.heal function
+			std::cout << "\nYou gain " << totalHealing << " Health Points!\n";
 			itemsHeld.erase(itemsHeld.begin() + (input - 1));
 
 			if (spellSlotsRestored > 0) {
@@ -1087,11 +1253,16 @@ public:
 				std::cout << "\nBut some of it was wasted..";
 				player.playerHealth = player.playerMaxHealth;
 			}
-			
+
 
 		}
-		if (itemType == "buff") itemsHeld.erase(itemsHeld.begin() + (input - 1));
-		 if (itemType == "damage") {
+		if (itemType == "buff") {
+			//status.grantStatusEffect(player, opponent, true, 0);
+			itemsHeld.erase(itemsHeld.begin() + (input - 1));
+
+
+		}
+		if (itemType == "damage") {
 			int finalItemDamage = itemDamage;
 			int scalingCode = getScalingTypeCode(scalingType);
 			int attribute = getPlayerAttribute(player, attributeScale);
@@ -1110,7 +1281,7 @@ public:
 				itemsHeld.erase(itemsHeld.begin() + (input - 1));
 				break;
 			case 3:
-				finalItemDamage = itemDamage * (1 + ((attribute * attributeScalingFactor)+(intensity*intensityScaleFactor)));
+				finalItemDamage = itemDamage * (1 + ((attribute * attributeScalingFactor) + (intensity * intensityScaleFactor)));
 				itemsHeld.erase(itemsHeld.begin() + (input - 1));
 				break;
 			default:
@@ -1120,7 +1291,7 @@ public:
 			}
 			if (itemVariance != 1.0) {
 
-				finalItemDamage *= rand() % static_cast<int>((itemVariance + player.luck/2));
+				finalItemDamage *= rand() % static_cast<int>((itemVariance + player.luck / 2));
 			}
 			std::cout << "Your item does " << finalItemDamage << " Damage!";
 
@@ -1149,70 +1320,35 @@ public:
 					goto label_name;
 				}
 			} // multi dagger throwing
-					
-			
+
+
 		}
-		 turnsElapsed++;
-	}
-
-};
-
-class statuseffects {
-private:
-
-	std::vector<statusEffect> playerStatuses; 
-	std::vector<statusEffect> enemyStatuses;
-
-	std::string defaultName = "Bleed";
-	std::string defaultActionName = "Bleeding"; // "You took 3 damage due to : Bleeding"
-	char defaultStatusId = '0';
-	char defaultType = 'h'; //h for healing over time, d for damage over time, b for buff, f for debuff
-	unsigned short defaultStrengthValue = 0;
-	unsigned short defaultDuration = 0;
-	std::string defaultBuffTarget = "dexterity";
-
-
-
-public:
-	character& player;
-	enemy& opponent;
-
-	void grantStatusEffect(character& player,enemy& opponent,bool onPlayer, char statusId){
-		statusEffect newEffect;
-		if (onPlayer) {
-			playerStatuses.push_back(newEffect);
+		if (itemTransforms) {
+			itemsHeld.push_back(itemBecomes);
+			updateItem(itemBecomes);
+			std::cout << "\nYou get a " << itemName << "!";
+		}
+		float chanceFreeAction = player.luck / 2;
+		if (chanceFreeAction >= 20)chanceFreeAction = 20;
+		rolledNumber = rand() % 100;
+		if (chanceFreeAction > rolledNumber) {
+			setColor(6);
+			std::cout << "\nYou got lucky, and can act again!";
+			setColor(7);
 		}
 		else {
-			enemyStatuses.push_back(newEffect);
+			turnsElapsed++;
 		}
-		//dealing with vectors
-	//if on player true
-		//statuspushback.player
-	//if on player flase
-		//statuspushback.enemy
-
+		
 	}
-	 
-	void tickStatus() {
-		// if turnsElapsed % 2 = 0
-			//for(statuses in player.statusEffects )
-				//do status effects on player
-				//duration - 1
-		// if turnsElapsed % 2 = 1
-			//for(statuses in opponent.statusEffects )
-				//do status effects on enemy
-				//duration - 1
-	}
-
-	
 
 };
-
 class shop {
 
 private:
 	int objectsAvailable = 4;
 	int recycleCount = 0;
+	int maxRecycleCount = 2;
 	std::string shopType = "items";
 	bool itemsGenerated = false;
 	bool spellsGenerated = false;
@@ -1325,8 +1461,8 @@ public:
 		
 		for (int i = 1; i <= objectsAvailable; i++) { 
 				
-			int randomItemId = rand() % 19; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
-			bool isPair = (rand() % 100 < 20);
+			int randomItemId = rand() % 20; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
+			//bool isPair = (rand() % 100 < 20);
 			if(!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
 		
 			}
@@ -1396,7 +1532,7 @@ public:
 		int manageChoice;
 		int actionChoice;
 		bool itemManaged = false;
-
+		maxRecycleCount = 2 + player.getLuck() / 5;
 		
 		shopItem.displayItemMenu(player, opponent);
 		if (shopItem.itemsHeld.empty()) {
@@ -1421,10 +1557,11 @@ public:
 		
 		while (!itemManaged) {
 			std::cout << "\n" << shopItem.itemName << "\nWhat do you wish to do with this item?"
-				<< "\nRecycles used: " << recycleCount << "/" << "2\n"
+				<< "\nRecycles used: " << recycleCount << "/" << maxRecycleCount << "\n"
 				<< "\n1) Throw away"
 				<< "\n2) Recycle"
-				<< "\n3) Keep\n";
+				<< "\n3) Refill (only for containers) (" << shopItem.itemCost << " gold)"
+				<< "\n4) Keep\n";
 
 			std::cin >> actionChoice;
 
@@ -1433,7 +1570,7 @@ public:
 				continue;
 			}
 
-			if (actionChoice < 1 || actionChoice > 3) {
+			if (actionChoice < 1 || actionChoice > 4) {
 				std::cout << "\nChoose one of the following options (1-3).\n";
 				continue;
 			}
@@ -1446,7 +1583,7 @@ public:
 				break;
 			case 2: {
 				int recycleCost = 5 + recycleCount * 2;
-				if (recycleCount < 2) {
+				if (recycleCount < maxRecycleCount) {
 					if (player.gold >= recycleCost) {
 						player.gold -= recycleCost;
 						recycleCount++;
@@ -1471,7 +1608,26 @@ public:
 					break;
 				}
 			}
-			case 3: 
+			case 3:
+				if (player.gold >= shopItem.itemCost && shopItem.canRefill) {
+
+					player.gold -= 3;
+					std::cout << "\nYou refil your " << shopItem.itemName;
+					shopItem.itemsHeld.push_back(shopItem.itemBecomes);
+					shopItem.updateItem(shopItem.itemBecomes);
+					shopItem.itemsHeld.erase(shopItem.itemsHeld.begin() + (manageChoice - 1));
+					std::cout << ", it's now a " << shopItem.itemName << ".";
+
+				}
+				else {
+
+					std::cout << "\nYou can't refill that silly!";
+
+				}
+				itemManaged = true;
+				break;
+
+			case 4: 
 				std::cout << "\n" << shopItem.itemName << " kept.\n";
 				itemManaged = true;
 				break;
@@ -1562,7 +1718,7 @@ public:
 				<< "\n2) Spells"
 				<< "\n3) Healer" 
 				<< "\n4) Check"
-				<< "\n5) Refresh"
+				<< "\n5) Refresh (8 Gold)"
 				<< "\n6) Manage Items"
 				<< "\n7) Leave shop\n";
 
@@ -1597,13 +1753,13 @@ public:
 				player.displayStats();
 				break;
 			case 5:
-				if (player.gold >= 5) {
-					player.gold -= 5;
+				if (player.gold >= 8) {
+					player.gold -= 8;
 					shopRefresh();
 					std::cout << "\nShop refreshed.";
 				}
 				else {
-					std::cout << "\nYou need 5 gold to refresh the shop";
+					std::cout << "\nYou need 8 gold to refresh the shop";
 				}
 
 				break;
@@ -1636,6 +1792,7 @@ private:
 	spells& spell;
 	items& item;
 	shop& shops;
+	statuseffects& status;
 
 	bool intensity10 = false;
 	bool intensity20 = false;
@@ -1643,15 +1800,17 @@ private:
 
 public:
 	
-	combatHandler(character& p, enemy& e, spells& s, items& i, shop& sh) : player(p), opponent(e), spell(s), item(i), shops(sh) {
+	combatHandler(character& p, enemy& e, spells& s, items& i, shop& sh, statuseffects& st) : player(p), opponent(e), spell(s), item(i), shops(sh), status(st) {
 		std::cout << std::endl << "BATTLE START!" << std::endl;
 	};
 	void battleRewards() {
 		if (!battling && opponent.enemyHealth <= 0) {
 			player.experience += opponent.experienceWorth;
-			player.gold += opponent.goldDropped;
+			int finalGold = opponent.goldDropped * (1.15 - (intensity/(85+player.endurance))*1.15);
+			if (finalGold < 0) finalGold = 1;
+			player.gold += finalGold;
 			setColor(6);
-			std::cout << "\nYou gained " << opponent.goldDropped << " gold and " << opponent.experienceWorth << " experience!\n";
+			std::cout << "\nYou gained " << opponent.goldDropped << " + ("<< (finalGold-opponent.goldDropped) <<" due to intensity)" <<" gold and " << opponent.experienceWorth << " experience!\n";
 			setColor(7);
 		}
 
@@ -1774,7 +1933,7 @@ public:
 		if (enemyRoll == 3)std::cout << "\n Special Encounter: " << opponent.name << ".";
 		while (battling)  {
 
-			
+			//status.tickStatus(player, opponent);
 
 			if(turnsElapsed % 2 == 0){
 
@@ -1910,50 +2069,111 @@ public:
 			
 	};
 
+	void startingBonus(character& player, items& item, spells& spell) {
+
+		if (player.getDexterity() >= 5) {
+			item.grantPlayerItem(1);
+			item.grantPlayerItem(1);
+			item.grantPlayerItem(1);
+			std::cout << "\nYour dexterity grants you a free trio of throwing daggers.\n";
+
+		}
+		if (player.getLuck() == 15) {
+			item.grantPlayerItem(-1);
+			item.grantPlayerItem(-1);
+			item.grantPlayerItem(-1);
+			item.grantPlayerItem(rand() % 8);
+			bonusIntensity = 2;
+			std::cout << "\nYou're just a really lucky person, maybe you're here because you're lucky, or maybe your luck is coming to an end.\n"
+				<< "Though, hard to say why you have 3 bowls.. I guess it was just luck";
+			player.grantGold(15);
+
+		}
+		if (player.getEndurance() > 12) {
+			
+			std::cout << "\nYou are a hulking mass, capable of nudging off all but the strongest of attacks...\n";
+			bonusHealth += 5;
+
+		}
+
+		if ((player.getFaith() + player.getWisdom()) > 10) {
+
+			spell.grantPlayerSpell(8);
+			std::cout << "\nYour arcane knowledge grants you insight on a spell!";
+
+		}
+		if ((player.getLuck() + player.getDexterity()) >= 12  && player.getDexterity() > 3) {
+
+			item.grantPlayerItem(1);
+			item.grantPlayerItem(8);
+			item.grantPlayerItem(14);
+			item.grantPlayerItem(18);
+			player.grantGold(10);
+			std::cout << "\nYour unique attributes offer you some useful goods..";
+
+		}
+
+
+		if (player.getEndurance() >= 7) {
+			item.grantPlayerItem(5);
+			item.grantPlayerItem(19);
+			bonusHealth += 2;
+			std::cout << "\nYou grew up healthier than most, you left on your adventure with a bowl of soup and a potion!\n";
+
+		}
+		if (player.getFaith() >= 5) {
+			item.grantPlayerItem(10);
+			item.grantPlayerItem(10);
+			item.grantPlayerItem(10);
+			std::cout << "\nYou find a broken cross necklace, and take some of the beads off of it.\n";
+			spell.grantPlayerSpell(4);
+
+		}
+		if (player.getLuck() >= 8) {
+			item.grantPlayerItem(18);
+			item.grantPlayerItem(18);
+			item.grantPlayerItem(18);
+			item.grantPlayerItem(rand() % 20);
+			std::cout << "\nYou've always been lucky, but will your luck persist?\n";
+			player.grantGold(15);
+
+		}
+
+		if (player.getWisdom() >= 5) {
+
+			std::cout << "\nUsing your intellect, you realize you can shoot sparks from your hands.\n";
+
+			spell.grantPlayerSpell(5);
+
+		}
+	}
+
 
 
 int main() {
 	startMenu();
 	srand(static_cast<unsigned int>(time(NULL)));
 
-	items testitem;
-	spells spelltest;
-	character test1(0,0,0,0,0,0);
 	
+	spells spelltest;
+	enemy test;
+	character test1(0, 0, 0, 0, 0, 0);
+	statuseffects teststatus(test1, test);
+	
+	items testitem(teststatus);
 	test1.pickAttributes();
 	//clear();
-
-	if (test1.getDexterity() >= 5) {
-		testitem.grantPlayerItem(1); 
-		testitem.grantPlayerItem(1);
-		testitem.grantPlayerItem(1);
-		std::cout << "\nYour dexterity grants you a free trio of throwing daggers.\n";
-
-	}
-	if (test1.getFaith() >= 5) {
-		testitem.grantPlayerItem(10);
-		testitem.grantPlayerItem(10);
-		testitem.grantPlayerItem(10);
-		std::cout << "\nYou find a broken cross necklace, and take some of the beads off of it.\n";
-		spelltest.grantPlayerSpell(4);
-
-	}
-
-	if (test1.getWisdom() >= 5) {
+	startingBonus(test1,testitem,spelltest);
 	
-		std::cout << "\nUsing your intellect, you realize you can shoot sparks from your hands.\n";
-		
-		spelltest.grantPlayerSpell(5); 
+	
 
-	}
-	enemy test;
 	test.enemySet(20, 20, 1, 4, 10, 20, "beebie", test1);
 	shop shoptest(spelltest, testitem, test1, test);
-	combatHandler combat1(test1, test, spelltest, testitem, shoptest);
+	combatHandler combat1(test1, test, spelltest, testitem, shoptest, teststatus);
 
 	while (test1.playerHealth > 0) {
 		battling = true;
-		intensity = 0;
+		intensity = bonusIntensity;
 		turnsElapsed = 0;
 		combat1.initiateCombat();
 		roundsPassed++;
