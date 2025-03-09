@@ -80,7 +80,9 @@ const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 	{"Little Golem", {30, 10, 6, 8, 30, '1', 1}},
 	{"Soul Sucker",{25, 8, 10, 16, 60, '2', 4}},
 	{"Living Armor", {80, 14, 6, 30, 100,'1', 5}},
-	{"Fear Monger", {90,12,12,40, 150,'3', 6}}
+	{"Fear Monger", {90,12,12,40, 150,'3', 6}},
+	{ "Fat Dragon", {180,25,25,100, 250,'4', 9}},
+	{ "Penultimate Knight", {220,34,22,120, 350,'3', 10}}
 };
 
 float calcDamageVariance() {
@@ -256,7 +258,10 @@ public:
 
 			}
 			updateCharacterStats();
-			playerHealth = playerMaxHealth;
+			if (playerHealth < playerMaxHealth)
+				playerHealth += playerMaxHealth - playerHealth;
+			else
+				std::cout << "\nYou preserve your bonus health.";
 		}
 		clear();
 		
@@ -563,7 +568,7 @@ public:
 
 			if (player.playerHealth > player.playerMaxHealth)
 				player.playerHealth = player.playerMaxHealth;
-
+			//being over on health reduces your hp.
 			std::cout << "\nYou gain " << player.playerHealth - originalPlayerHealth << " Health Points!\n";
 			}
 			else {
@@ -1391,7 +1396,7 @@ public:
 		int healingPrice = ((player.playerMaxHealth - player.playerHealth) / 3);
 		int spellSlotPrice = 4 * 1 * (player.level * 0.8);
 		if (spellSlotPrice > 20) spellSlotPrice = 20;
-		short tempSlotPrice = (5 * player.temporarySpellSlots) + spellSlotPrice;
+		short tempSlotPrice = (10 * player.temporarySpellSlots) + 15;
 		int fullSpellSlotPrice = spellSlotPrice * (player.maximumSpellsAvailable - player.spellsAvailable);
 
 		std::cout << "-----Healing-----\n" <<
@@ -1403,7 +1408,7 @@ public:
 			<< "Health: " << player.playerHealth << "/" << player.playerMaxHealth << "\n" 
 			<< "Spell Slots: " <<player.spellsAvailable << "/" << player.maximumSpellsAvailable << "\n"
 			<< "Temporary Slots: " <<player.temporarySpellSlots << "\n" 
-			<< "\nChoose a number 1-4\n";
+			<< "\nChoose a number 1-5\n";
 			
 		std::cin >> healingChoice;
 
@@ -1750,6 +1755,7 @@ public:
 			int healPrice = ((player.playerMaxHealth - player.playerHealth) / 3 + 4 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level*0.8);
 			std::cout
 				<< "\nYou have " << player.gold << " Gold."
+				<< "\nHP: " << drawHealthBar(player.playerHealth,player.playerMaxHealth)
 				<< "\n1) Items"
 				<< "\n2) Spells"
 				<< "\n3) Healer" 
