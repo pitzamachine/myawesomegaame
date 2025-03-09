@@ -129,6 +129,7 @@ public:
 	unsigned int magicDefense = 0;
 	unsigned short spellsAvailable = 0;
 	unsigned short maximumSpellsAvailable = 0;
+	unsigned short temporarySpellSlots = 0;
 
 
 	int getEndurance() {
@@ -323,7 +324,7 @@ public:
 	int baseHealing = 0;
 	std::string statusEffect = ""; 
 	float statusApplyChance = 0.05;
-	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both, 3 is neither
+	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both, 3 is neither, 4 is strength, 5 is dex?
 	std::string spellName = "default";
 	std::vector<char> spellsKnown;
 	
@@ -527,6 +528,13 @@ public:
 
 			break;
 
+		case '4':
+			modifier = ((player.strength * attributePowerModifier));
+			break;
+		case '5':
+			modifier = ((player.dexterity * attributePowerModifier));
+			break;
+
 		default:
 
 			break;
@@ -536,7 +544,15 @@ public:
 
 	int calculateSpellPower(character& player, bool display) {
 		// this code decides the spell damage based off the scaling types. 0 for wisdom, 1 for faith, 2 for both.
-		if(!display) player.spellsAvailable -= spellSlotCost;
+		if (!display) {
+			if (spellSlotCost <= player.spellsAvailable) {
+				player.spellsAvailable -= spellSlotCost;
+			}
+			else
+				player.temporarySpellSlots -= spellSlotCost;
+			
+		}
+		
 		int finalDamage = 0;
 		int finalHealing = baseHealing + powerModifier(player);
 		int originalPlayerHealth = player.playerHealth;
@@ -724,8 +740,6 @@ public:
 	}
 
 };
-
-
 
 class statuseffects {
 private:
@@ -1377,22 +1391,25 @@ public:
 		int healingPrice = ((player.playerMaxHealth - player.playerHealth) / 3);
 		int spellSlotPrice = 4 * 1 * (player.level * 0.8);
 		if (spellSlotPrice > 20) spellSlotPrice = 20;
+		short tempSlotPrice = (5 * player.temporarySpellSlots) + spellSlotPrice;
 		int fullSpellSlotPrice = spellSlotPrice * (player.maximumSpellsAvailable - player.spellsAvailable);
 
 		std::cout << "-----Healing-----\n" <<
 			"1) Heal 3 HP: 1 Gold\n" <<
 			"2) Full Heal: " << healingPrice << " Gold\n" <<
 			"3) One spell slot: " << spellSlotPrice << " Gold\n" <<
-			"4) Full spell slots: " << fullSpellSlotPrice << " Gold\n\n"
+			"4) Full spell slots: " << fullSpellSlotPrice << " Gold\n" <<
+			"5) Temporary spell slots: " << tempSlotPrice << " Gold\n"
 			<< "Health: " << player.playerHealth << "/" << player.playerMaxHealth << "\n" 
 			<< "Spell Slots: " <<player.spellsAvailable << "/" << player.maximumSpellsAvailable << "\n"
+			<< "Temporary Slots: " <<player.temporarySpellSlots << "\n" 
 			<< "\nChoose a number 1-4\n";
 			
 		std::cin >> healingChoice;
 
 		handleInputFailure("\nInvalid input, healing cancelled.");
-		if (healingChoice > 4 || healingChoice < 1) {
-			std::cout << "\nChoose a number 1-4";
+		if (healingChoice > 5 || healingChoice < 1) {
+			std::cout << "\nChoose a number 1-5";
 		}
 		else {
 
@@ -1446,7 +1463,25 @@ public:
 					std::cout << "\nChanneling unsuccessful. (Full spell slots, or not enough gold)";
 				}
 				break;
+				
+			case 5: {
+			
+				if (player.gold >= tempSlotPrice) {
+
+					player.gold -= tempSlotPrice;
+					player.temporarySpellSlots++;
+					std::cout << "\nYou gain a temporary spell slot to use in the next 2 battles.";
+
+				}
+				else {
+
+					std::cout << "\nYou don't have enough to buy a temporary spell slot!";
+				}
+
 				break;
+
+			}
+				
 
 			}
 
@@ -1707,6 +1742,7 @@ public:
 
 		int shopChoice;
 		doneShopping = false;
+		player.temporarySpellSlots = 0; //reset temp spell slots, they only last 2 battles.
 		setColor(4);
 		std::cout <<  "--Welcome to the shop!--\n";
 		setColor(7);
@@ -1997,11 +2033,12 @@ public:
 			case 3:
 			{
 				std::cout <<"\nSpells Available: "<< player.spellsAvailable << "\n";
+				std::cout << "\Temporary Slots: " << player.temporarySpellSlots << "\n";
 				char spellUsed = spell.displaySpellMenu(player);
 				if (spellUsed == 'f') break;  //f is the default 
 				spell.updateSpell(spellUsed);
 
-				if (spell.spellSlotCost <= player.spellsAvailable) {
+				if (spell.spellSlotCost <= player.spellsAvailable || spell.spellSlotCost <= player.temporarySpellSlots) {
 					int spellDamage = spell.calculateSpellPower(player, false);
 					if (spellDamage > 0)
 					opponent.takeDamage(spellDamage);
@@ -2114,7 +2151,7 @@ public:
 		}
 
 
-		if (player.getEndurance() >= 7) {
+		if (player.getEndurance() >= 6) {
 			item.grantPlayerItem(5);
 			item.grantPlayerItem(19);
 			bonusHealth += 2;
