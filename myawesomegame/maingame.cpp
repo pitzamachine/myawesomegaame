@@ -327,6 +327,7 @@ public:
 	short spellSlotCost = 0;
 	short spellPrice = 0;
 	int baseHealing = 0;
+	int healthCost = 0;
 	std::string statusEffect = ""; 
 	float statusApplyChance = 0.05;
 	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both, 3 is neither, 4 is strength, 5 is dex?
@@ -344,6 +345,11 @@ public:
 
 	}
 	
+	struct spellEffect {
+		int damage = 0;
+		int healing = 0;
+	};
+	spellEffect effect;
 	char displaySpellMenu(character& player) {
 
 		if (spellsKnown.empty()) {
@@ -358,7 +364,8 @@ public:
 
 				id = spellId;
 				updateSpell(spellId);
-				std::cout << i << ": " << spellName << " | Cost: " << spellSlotCost  << " | Damage: " << calculateSpellPower(player,true) << std::endl;
+				std::cout << i << ": " << spellName << " | Cost: " << spellSlotCost  
+					<< " | Damage: " << calculateSpellPower(player,true) << std::endl;
 				i++;
 
 			}
@@ -395,7 +402,7 @@ public:
 	}
 
 	void updateSpell(char SpellId) {
-
+		healthCost = 0;
 		
 		switch (SpellId) {
 
@@ -501,9 +508,59 @@ public:
 			spellPrice = 45;
 			break;
 
+		case 10:
+			baseHealing = 0;
+			baseDamage = 8;
+			spellName = "Crash Wave";
+			attributePowerModifier = 0.65f;
+			scalingAttribute = '4'; // strength
+			spellSlotCost = 1;
+			spellPrice = 20;
+			break;
+		case 11:
+			baseHealing = 0;
+			healthCost = 6;
+			baseDamage = 12;
+			spellName = "High Sacrifice";
+			attributePowerModifier = 1.05f;
+			scalingAttribute = '7'; // end faith
+			spellSlotCost = 2;
+			spellPrice = 45;
+			break;
+		case 12:
+			baseHealing = 0;
+			healthCost = 0;
+			baseDamage = 2;
+			spellName = "Splitting Shot";
+			attributePowerModifier = 1.75f;
+			scalingAttribute = '6'; // dex luck
+			spellSlotCost = 1;
+			spellPrice = 15;
+			break;
+		case 13:
+			baseHealing = 0;
+			healthCost = 9;
+			baseDamage = 15;
+			spellName = "Blind Rage";
+			attributePowerModifier = 0.45f;
+			scalingAttribute = '4'; // strength
+			spellSlotCost = 1;
+			spellPrice = 25;
+			break;
+		case 14:
+			baseHealing = 2;
+			healthCost = 3;
+			baseDamage = 0;
+			spellName = "Monk's Healing";
+			attributePowerModifier = 0.25f;
+			scalingAttribute = '7'; // end faith
+			spellSlotCost = 1;
+			spellPrice = 12;
+			break;
+
 		default:
 			std::cout << "Hello, i'm not a spell!"; //this will display this humorous text if some how
-			// you input a wrong value when updating the spell
+			// i input a wrong value when updating the spell or some garbage
 			break;
 
 
@@ -540,6 +597,13 @@ public:
 			modifier = ((player.dexterity * attributePowerModifier));
 			break;
 
+		case '6':
+			modifier = (((player.dexterity + player.luck) * attributePowerModifier));
+			break;
+		case '7':
+			modifier = (((player.endurance + player.faith/2) * attributePowerModifier));
+			break;
+
 		default:
 
 			break;
@@ -547,62 +611,110 @@ public:
 		return modifier;
 	}
 
-	int calculateSpellPower(character& player, bool display) {
-		// this code decides the spell damage based off the scaling types. 0 for wisdom, 1 for faith, 2 for both.
-		if (!display) {
-			if (spellSlotCost <= player.spellsAvailable) {
-				player.spellsAvailable -= spellSlotCost;
-			}
-			else
-				player.temporarySpellSlots -= spellSlotCost;
-			
-		}
-		
+	spellEffect calculateSpellPower(character& player, bool display) {
+
+		spellEffect effect;
 		int finalDamage = 0;
 		int finalHealing = baseHealing + powerModifier(player);
 		int originalPlayerHealth = player.playerHealth;
-		if (!display) {
-			if (baseHealing > 0 && player.playerHealth != player.playerMaxHealth) {
 
-			player.playerHealth += finalHealing;
-
-			if (player.playerHealth > player.playerMaxHealth)
-				player.playerHealth = player.playerMaxHealth;
-			//being over on health reduces your hp.
-			std::cout << "\nYou gain " << player.playerHealth - originalPlayerHealth << " Health Points!\n";
+		/*if (healthCost > 0 && player.playerHealth <= healthCost) {
+			if (!display) {
+				std::cout << "\nYou lack the life force to cast this spell!\n";
+				return 0;
 			}
-			else {
-				if (baseDamage == 0)
-					player.spellsAvailable += spellSlotCost;
-		}
-	}
-		switch (scalingAttribute) {
+			if (display) return 0; // Return base value for display if HP too low
+		}*/
+		if(!display)player.playerHealth -= healthCost;
 
-		case '0':
-			finalDamage = baseDamage + powerModifier(player);
-			finalDamage *= static_cast<float>((1 + intensity * 0.1));
-			return finalDamage;
-			break;
-		case '1':
+			
+			if (!display) {
+				if (spellSlotCost <= player.spellsAvailable) {
+					player.spellsAvailable -= spellSlotCost;
+				}
+				else
+					player.temporarySpellSlots -= spellSlotCost;
 
-			finalDamage = baseDamage * powerModifier(player);
-			finalDamage *= static_cast<float>((1 + intensity * 0.172));
-			return finalDamage;
-			break;
+			}
 
-		case '2':
+			
+			
+			if (!display) {
+				if (baseHealing > 0 && player.playerHealth != player.playerMaxHealth) {
 
-			finalDamage = baseDamage + powerModifier(player);
-			finalDamage *= static_cast<float>((1 + intensity * 0.1));
-			return finalDamage;
-			break;
+					player.playerHealth += finalHealing;
 
-		default:
+					if (player.playerHealth > player.playerMaxHealth)
+						player.playerHealth = player.playerMaxHealth;
+					//being over on health reduces your hp.
+					std::cout << "\nYou gain " << player.playerHealth - originalPlayerHealth << " Health Points!\n";
+				}
+				else {
+					if (baseDamage == 0)
+						player.spellsAvailable += spellSlotCost;
+				}
+			}
+			switch (scalingAttribute) {
 
-			std::cout << "\n Something went wrong.. \n";
-			return 0;
+			case '0':
+				finalDamage = baseDamage + powerModifier(player);
+				finalDamage *= static_cast<float>((1 + intensity * 0.1));
+				effect.damage = finalDamage;
+				return effect;
+				break;
+			case '1':
 
-		}
+				finalDamage = baseDamage * powerModifier(player);
+				finalDamage *= static_cast<float>((1 + intensity * 0.172));
+				effect.damage = finalDamage;
+				return effect;
+				break;
+
+			case '2':
+
+				finalDamage = baseDamage + powerModifier(player);
+				finalDamage *= static_cast<float>((1 + intensity * 0.1));
+				effect.damage = finalDamage;
+				return effect;
+				break;
+
+			case '3':
+
+				finalDamage = baseDamage;
+				finalDamage *= static_cast<float>((1.2 + intensity * 0.11));
+				effect.damage = finalDamage;
+				return effect;
+				break;
+
+			case '4':
+
+				finalDamage = baseDamage + powerModifier(player);
+				finalDamage *= static_cast<float>((1.1 + intensity * 0.08));
+				effect.damage = finalDamage;
+				return effect;
+				break;
+
+			case '5':
+
+				finalDamage = baseDamage + powerModifier(player);
+				finalDamage *= static_cast<float>((1.0 + intensity * 0.12));
+				effect.damage = finalDamage;
+				return effect;
+				break;
+
+			default:
+
+				finalDamage = baseDamage + powerModifier(player);
+				finalDamage *= static_cast<float>((1 + intensity * 0.1));
+				effect.damage = finalDamage;
+				return effect;
+				break;
+
+
+			}
+
+
+		
 		
 		
 	}
@@ -1373,7 +1485,7 @@ private:
 	bool spellsGenerated = false;
 	bool doneShopping = false;
 	bool shopUpgraded = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -2045,12 +2157,15 @@ public:
 				spell.updateSpell(spellUsed);
 
 				if (spell.spellSlotCost <= player.spellsAvailable || spell.spellSlotCost <= player.temporarySpellSlots) {
-					int spellDamage = spell.calculateSpellPower(player, false);
-					if (spellDamage > 0)
-					opponent.takeDamage(spellDamage);
-					
-					intensity++;
-					turnsElapsed++;
+					if (player.playerHealth > spell.healthCost) {
+						int spellDamage = spell.calculateSpellPower(player, false);
+						if (spellDamage > 0)
+						opponent.takeDamage(spellDamage);
+						intensity++;
+						turnsElapsed++;
+
+					}
+
 				}
 				else {
 					std::cout << "Insufficient spell power available";
@@ -2132,15 +2247,15 @@ public:
 			player.grantGold(15);
 
 		}
-		if (player.getEndurance() > 12) {
-			
+		if (player.getEndurance() > 11) {
+			//spell.grantPlayerSpell(14);
 			std::cout << "\nYou are a hulking mass, capable of nudging off all but the strongest of attacks...\n";
 			bonusHealth += 5;
 
 		}
 
-		if ((player.getFaith() + player.getWisdom()) > 10) {
-
+		if ((player.getFaith() + player.getWisdom()) >= 10) {
+			
 			spell.grantPlayerSpell(8);
 			std::cout << "\nYour arcane knowledge grants you insight on a spell!";
 
