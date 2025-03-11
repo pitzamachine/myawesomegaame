@@ -348,10 +348,12 @@ public:
 	struct spellEffect {
 		int damage = 0;
 		int healing = 0;
+		int selfDamage = 0;
 	};
-	spellEffect effect;
+	
 	char displaySpellMenu(character& player) {
 
+		
 		if (spellsKnown.empty()) {
 
 			std::cout << "You don't know any spells. \n";
@@ -364,8 +366,9 @@ public:
 
 				id = spellId;
 				updateSpell(spellId);
+				spellEffect effect = calculateSpellPower(player, true);
 				std::cout << i << ": " << spellName << " | Cost: " << spellSlotCost  
-					<< " | Damage: " << calculateSpellPower(player,true) << std::endl;
+					<< " | Damage: " << effect.damage << " | Healing: " << effect.healing << " | Self Damage: " << effect.selfDamage << std::endl;
 				i++;
 
 			}
@@ -613,9 +616,15 @@ public:
 
 	spellEffect calculateSpellPower(character& player, bool display) {
 
+
 		spellEffect effect;
 		int finalDamage = 0;
-		int finalHealing = baseHealing + powerModifier(player);
+		effect.selfDamage = healthCost;
+		if (baseHealing > 0) {
+			int finalHealing = baseHealing + powerModifier(player);
+			effect.healing = finalHealing;
+		}
+
 		int originalPlayerHealth = player.playerHealth;
 
 		/*if (healthCost > 0 && player.playerHealth <= healthCost) {
@@ -625,49 +634,25 @@ public:
 			}
 			if (display) return 0; // Return base value for display if HP too low
 		}*/
-		if(!display)player.playerHealth -= healthCost;
-
+	
 			
-			if (!display) {
-				if (spellSlotCost <= player.spellsAvailable) {
-					player.spellsAvailable -= spellSlotCost;
-				}
-				else
-					player.temporarySpellSlots -= spellSlotCost;
-
-			}
-
-			
-			
-			if (!display) {
-				if (baseHealing > 0 && player.playerHealth != player.playerMaxHealth) {
-
-					player.playerHealth += finalHealing;
-
-					if (player.playerHealth > player.playerMaxHealth)
-						player.playerHealth = player.playerMaxHealth;
-					//being over on health reduces your hp.
-					std::cout << "\nYou gain " << player.playerHealth - originalPlayerHealth << " Health Points!\n";
-				}
-				else {
-					if (baseDamage == 0)
-						player.spellsAvailable += spellSlotCost;
-				}
-			}
+	
+					
+		if (baseDamage > 0) {
 			switch (scalingAttribute) {
 
 			case '0':
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.1));
 				effect.damage = finalDamage;
-				return effect;
+				
 				break;
 			case '1':
 
 				finalDamage = baseDamage * powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.172));
 				effect.damage = finalDamage;
-				return effect;
+				
 				break;
 
 			case '2':
@@ -675,7 +660,7 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.1));
 				effect.damage = finalDamage;
-				return effect;
+			
 				break;
 
 			case '3':
@@ -683,7 +668,7 @@ public:
 				finalDamage = baseDamage;
 				finalDamage *= static_cast<float>((1.2 + intensity * 0.11));
 				effect.damage = finalDamage;
-				return effect;
+				
 				break;
 
 			case '4':
@@ -691,7 +676,7 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1.1 + intensity * 0.08));
 				effect.damage = finalDamage;
-				return effect;
+				
 				break;
 
 			case '5':
@@ -699,7 +684,7 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1.0 + intensity * 0.12));
 				effect.damage = finalDamage;
-				return effect;
+				
 				break;
 
 			default:
@@ -707,13 +692,17 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.1));
 				effect.damage = finalDamage;
-				return effect;
+				
 				break;
 
 
 			}
 
+	}
+					
+			
 
+			return effect;
 		
 		
 		
@@ -1474,6 +1463,7 @@ public:
 	}
 
 };
+
 class shop {
 
 private:
@@ -2032,12 +2022,14 @@ public:
 	}
 
 	bool fleeLogic() {
+		int fleebonus = 0;
 		float intensityMultiplier = 1;
 		if (intensity <= 10) intensityMultiplier = 0.6f;
+		if (intensity < 2) fleebonus = 50;
 		else intensityMultiplier = 1;
 		double result = 6.2 * intensity * intensityMultiplier; // result is double
 		int finalIntensity = static_cast<int>(result); // explicit cast to int
-		int fleeValue = rand() % 301 + player.luck * 3 + player.dexterity * 2;
+		int fleeValue = rand() % 301 + player.luck * 3 + player.dexterity * 2 + fleebonus;
 		int fleeNumberNeeded = static_cast<int>(100 + (sqrt(player.luck * (player.dexterity + 2)) * 4) + finalIntensity);
 		if (fleeValue > fleeNumberNeeded){
 			std::cout << "You fled successfully.\n";
@@ -2153,17 +2145,48 @@ public:
 				std::cout <<"\nSpells Available: "<< player.spellsAvailable << "\n";
 				std::cout << "\Temporary Slots: " << player.temporarySpellSlots << "\n";
 				char spellUsed = spell.displaySpellMenu(player);
-				if (spellUsed == 'f') break;  //f is the default 
 				spell.updateSpell(spellUsed);
+				spells::spellEffect effect = spell.calculateSpellPower(player, false);
+				if (spellUsed == 'f') break;  //f is the default 
+			
 
 				if (spell.spellSlotCost <= player.spellsAvailable || spell.spellSlotCost <= player.temporarySpellSlots) {
 					if (player.playerHealth > spell.healthCost) {
-						int spellDamage = spell.calculateSpellPower(player, false);
-						if (spellDamage > 0)
-						opponent.takeDamage(spellDamage);
+
+						
+
+						if (effect.selfDamage > 0) {
+							player.playerHealth -= spell.healthCost;
+							std::cout << "\nYou take " << spell.healthCost << " damage due to " << spell.spellName;
+						}
+
+							if (effect.damage > 0) {
+								opponent.takeDamage(effect.damage);
+							}
+							if (effect.healing > 0) {
+								int originalHealth = player.playerHealth;
+								player.playerHealth += effect.healing;
+								if (player.playerHealth > player.playerMaxHealth) {
+									player.playerHealth = player.playerMaxHealth;
+									std::cout << "\nYou heal for " << (player.playerHealth - originalHealth) << " health.";
+								}	
+							}
+							
+							
+							if (player.spellsAvailable < spell.spellSlotCost) {
+
+								player.temporarySpellSlots -= spell.spellSlotCost;
+							}
+							else {
+								player.spellsAvailable -= spell.spellSlotCost;
+
+							}
 						intensity++;
 						turnsElapsed++;
 
+					}
+					else {
+						std::cout << "You lack the life force to cast this spell (" << spell.healthCost << ")";
 					}
 
 				}
