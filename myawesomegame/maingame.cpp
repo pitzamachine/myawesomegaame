@@ -1956,6 +1956,15 @@ public:
 			setColor(6);
 			std::cout << "\nYou gained " << opponent.goldDropped << " + ("<< (finalGold-opponent.goldDropped) <<" due to intensity)" <<" gold and " << opponent.experienceWorth << " experience!\n";
 			setColor(7);
+			if (player.getDexterity() >= 10) {
+
+				rolledNumber = rand() % 5;
+					if (rolledNumber == 3) {
+						item.grantPlayerItem(1);
+						std::cout << "\nThe enemy drops a throwing dagger.\n";
+
+					}
+			}
 		}
 
 
