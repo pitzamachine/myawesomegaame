@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include "startgame.h"
 #include <algorithm>
+#include <iomanip>
 
 
 int intensity = 0;
@@ -137,7 +138,6 @@ public:
 	int getEndurance() {
 		return endurance;
 	}
-
 	int getDexterity() {
 		return dexterity;
 	}
@@ -150,6 +150,10 @@ public:
 	int getLuck() {
 		return luck;
 	}
+	int getStrength() {
+		return strength;
+	}
+
 	void grantGold(int amount) {
 		gold += amount;
 	}
@@ -367,8 +371,11 @@ public:
 				id = spellId;
 				updateSpell(spellId);
 				spellEffect effect = calculateSpellPower(player, true);
-				std::cout << i << ": " << spellName << " | Cost: " << spellSlotCost  
-					<< " | Damage: " << effect.damage << " | Healing: " << effect.healing << " | Self Damage: " << effect.selfDamage << std::endl;
+				std::cout << std::setw(2) << i << ": " << std::setw(15) << spellName
+					<< " | Cost: " << std::setw(2) << spellSlotCost
+					<< " | Damage: " << std::setw(3) << effect.damage
+					<< " | Healing: " << std::setw(3) << effect.healing
+					<< " | Self Damage: " << std::setw(3) << effect.selfDamage << std::endl;
 				i++;
 
 			}
@@ -414,7 +421,7 @@ public:
 			baseHealing = 0;
 			baseDamage = 4;
 			attributePowerModifier = 1.6f;
-			spellName = "Zap";
+			spellName = "Zap"; // wisdom
 			scalingAttribute = '0';
 			spellSlotCost = 1;
 			spellPrice = 20;
@@ -423,7 +430,7 @@ public:
 			baseHealing = 0;
 			baseDamage = 5;
 			attributePowerModifier = 1.32f;
-			spellName = "Light Ray";
+			spellName = "Light Ray"; // faith
 			scalingAttribute = '1';
 			spellSlotCost = 1;
 			spellPrice = 25;
@@ -434,7 +441,7 @@ public:
 			baseHealing = 0;
 			baseDamage = 15;
 			spellName = "Hailstorm";
-			attributePowerModifier = 1.4f;
+			attributePowerModifier = 1.38f;
 			scalingAttribute = '2'; // both
 			spellSlotCost = 2;
 			spellPrice = 40;
@@ -463,10 +470,10 @@ public:
 			break;
 
 		case 5:
-			baseDamage = 3;
+			baseDamage = 3; // this spell is really weak, it does comprable damage to lifetap
 			spellName = "Spark";
 			attributePowerModifier = 0.33f;
-			scalingAttribute = '2';
+			scalingAttribute = '2'; // wis faith
 			spellSlotCost = 1;
 			spellPrice = 5;
 			baseHealing = 0;
@@ -497,15 +504,15 @@ public:
 			baseDamage = 5;
 			spellName = "Lifetap";
 			attributePowerModifier = 0.10f;
-			scalingAttribute = '2'; // both
+			scalingAttribute = '2'; // faith wis
 			spellSlotCost = 1;
 			spellPrice = 15;
 			break;
 		case 9:
 			baseHealing = 0;
-			baseDamage = 10;
+			baseDamage = 11;
 			spellName = "Thunderbolt";
-			attributePowerModifier = 1.45f;
+			attributePowerModifier = 1.48f;
 			scalingAttribute = '0'; // wisdom
 			spellSlotCost = 2;
 			spellPrice = 45;
@@ -535,10 +542,10 @@ public:
 			healthCost = 0;
 			baseDamage = 2;
 			spellName = "Splitting Shot";
-			attributePowerModifier = 1.75f;
+			attributePowerModifier = 1.85f;
 			scalingAttribute = '6'; // dex luck
-			spellSlotCost = 1;
-			spellPrice = 15;
+			spellSlotCost = 2;
+			spellPrice = 25;
 			break;
 		case 13:
 			baseHealing = 0;
@@ -560,6 +567,29 @@ public:
 			spellSlotCost = 1;
 			spellPrice = 12;
 			break;
+
+		case 15:
+			baseHealing = 0;
+			healthCost = 0;
+			baseDamage = 4;
+			spellName = "Thrown Coin";
+			attributePowerModifier = 0.35f;
+			scalingAttribute = '8'; // luck
+			spellSlotCost = 1;
+			spellPrice = 20;
+			break;
+
+		case 16:
+			baseHealing = 0;
+			healthCost = 0;
+			baseDamage = 4;
+			spellName = "Special Dagger";
+			attributePowerModifier = 1.15f;
+			scalingAttribute = '5'; // dex 
+			spellSlotCost = 1;
+			spellPrice = 20;
+			break;
+
 
 		default:
 			std::cout << "Hello, i'm not a spell!"; //this will display this humorous text if some how
@@ -605,6 +635,13 @@ public:
 			break;
 		case '7':
 			modifier = (((player.endurance + player.faith/2) * attributePowerModifier));
+			break;
+
+		case '8':
+			modifier = (player.luck * attributePowerModifier);
+			rolledNumber = 10 + rand() % 290;
+			modifier *= rolledNumber / 100.0f;
+			
 			break;
 
 		default:
@@ -685,6 +722,14 @@ public:
 				finalDamage *= static_cast<float>((1.0 + intensity * 0.12));
 				effect.damage = finalDamage;
 				
+				break;
+
+			case '8':
+				//pure luck spells
+				finalDamage = baseDamage * powerModifier(player);
+				finalDamage *= static_cast<float>((0.3 + intensity * 0.22));
+				effect.damage = finalDamage;
+
 				break;
 
 			default:
@@ -1356,7 +1401,7 @@ public:
 		}
 
 		if (itemType == "healing" && player.playerHealth < player.playerMaxHealth) {
-			int totalHealing = itemHealingPower * (1 + player.endurance / 25);
+			float totalHealing = itemHealingPower * (1 + player.endurance / 25);
 			player.playerHealth += totalHealing; // you should replace this with a player.heal function
 			std::cout << "\nYou gain " << totalHealing << " Health Points!\n";
 			itemsHeld.erase(itemsHeld.begin() + (input - 1));
@@ -1475,7 +1520,7 @@ private:
 	bool spellsGenerated = false;
 	bool doneShopping = false;
 	bool shopUpgraded = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -2266,6 +2311,13 @@ public:
 			item.grantPlayerItem(1);
 			item.grantPlayerItem(1);
 			std::cout << "\nYour dexterity grants you a free trio of throwing daggers.\n";
+
+		}
+		 
+		if (player.getStrength() >= 8) {
+			spell.grantPlayerSpell(10);
+			bonusHealth += 1;
+			std::cout << "\nYou strength lets you send forth a damaging wave of energy, given the correct circumstances.\n";
 
 		}
 		if (player.getLuck() == 15) {
