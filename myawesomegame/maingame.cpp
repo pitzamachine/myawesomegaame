@@ -24,11 +24,16 @@ int roundsNeeded = 2;
 
 //bonus stats
 unsigned short bonusHealth = 0;
+unsigned short bonusDefense = 0;
 unsigned short bonusIntensity = 0;
 unsigned short bonusCritChance = 0;
 unsigned short bonusMeleeDamage = 0;
+unsigned short bonusSpellDamage = 0;
 unsigned short bonusRecycle = 0;
 unsigned short bonusItemDamage = 0;
+unsigned short bonusFreeItemTurnChance = 0;
+unsigned short bonusSpellSlots = 0;
+std::string playerSpeciality = "fuck";
 
 
 
@@ -137,6 +142,10 @@ public:
 	unsigned short maximumSpellsAvailable = 0;
 	unsigned short temporarySpellSlots = 0;
 
+	void setName(std::string yourname) {
+
+		name = yourname;
+	}
 
 	int getEndurance() {
 		return endurance;
@@ -277,10 +286,10 @@ public:
 	void updateCharacterStats() {
 
 		playerMaxHealth = 10 + bonusHealth + 3*(level-1) + endurance * 3;
-		defense = 1 + endurance * 2 + strength * 1 + (level*0.5);
+		defense = 1 + endurance * 2 + strength * 1 + (level*0.5) + bonusDefense;
 		temporaryDefense = defense;
 		magicDefense = faith * 3 + wisdom * 1 + luck * 1;
-		maximumSpellsAvailable = (faith / 4.5f + wisdom / 2.7f); // adds up the two variables and rounds down
+		maximumSpellsAvailable = (faith / 4.5f + wisdom / 2.7f) + bonusSpellSlots; // adds up the 3 variables and rounds down
 		spellsAvailable = maximumSpellsAvailable;
 	}
 	void takeDamage(int damage) {
@@ -357,6 +366,7 @@ public:
 		int damage = 0;
 		int healing = 0;
 		int selfDamage = 0;
+		unsigned short intensityChanger = 0;
 	};
 	
 	char displaySpellMenu(character& player) {
@@ -379,7 +389,8 @@ public:
 					<< " | Cost: " << std::setw(2) << spellSlotCost
 					<< " | Damage: " << std::setw(3) << effect.damage
 					<< " | Healing: " << std::setw(3) << effect.healing
-					<< " | Self Damage: " << std::setw(3) << effect.selfDamage << std::endl;
+					<< " | Self Damage: " << std::setw(3) << effect.selfDamage 
+				<< " | Intensity Change: " << std::setw(3) << intensityChange << std::endl;
 				i++;
 
 			}
@@ -721,7 +732,7 @@ public:
 
 
 		spellEffect effect;
-		intensity += intensityChange;
+		
 		int finalDamage = 0;
 		if (id == 14) {
 			effect.selfDamage = player.playerMaxHealth/10;
@@ -755,7 +766,7 @@ public:
 			case '0':
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.1));
-				effect.damage = finalDamage;
+				effect.damage = finalDamage + bonusSpellDamage;
 				
 				break;
 			case '1':
@@ -1478,7 +1489,7 @@ public:
 			float totalHealing = itemHealingPower * (1 + player.endurance / 25);
 			player.playerHealth += totalHealing; // you should replace this with a player.heal function
 			std::cout << "\nYou gain " << totalHealing << " Health Points!\n";
-			itemsHeld.erase(itemsHeld.begin() + (input - 1));
+			
 
 			if (spellSlotsRestored > 0) {
 				player.spellsAvailable += spellSlotsRestored;
@@ -1487,19 +1498,17 @@ public:
 					player.spellsAvailable = player.maximumSpellsAvailable;
 				}
 			}
-
+			itemsHeld.erase(itemsHeld.begin() + (input - 1));
 			if (player.playerHealth > player.playerMaxHealth) {
 				std::cout << "\nBut some of it was wasted..";
 				player.playerHealth = player.playerMaxHealth;
 			}
-
+			
 
 		}
 		if (itemType == "buff") {
 			//status.grantStatusEffect(player, opponent, true, 0);
 			itemsHeld.erase(itemsHeld.begin() + (input - 1));
-
-
 		}
 		if (itemType == "damage") {
 			int finalItemDamage = itemDamage;
@@ -1508,6 +1517,7 @@ public:
 			if (itemHealingPower > 0) {
 				player.playerHealth += itemHealingPower; // you should replace this with a player.heal function
 				std::cout << "\nYou gain " << itemHealingPower << " Health Points!";
+				
 			}
 			switch (scalingCode) {
 
@@ -1567,7 +1577,7 @@ public:
 			updateItem(itemBecomes);
 			std::cout << "\nYou get a " << itemName << "!";
 		}
-		float chanceFreeAction = player.luck / 2;
+		float chanceFreeAction = player.luck / 2 + bonusFreeItemTurnChance;
 		if (chanceFreeAction >= 20)chanceFreeAction = 20;
 		rolledNumber = rand() % 100;
 		if (chanceFreeAction > rolledNumber) {
@@ -2379,7 +2389,7 @@ public:
 			
 	};
 
-	void startingBonus(character& player, items& item, spells& spell) {
+void startingBonus(character& player, items& item, spells& spell) {
 
 		if (player.getDexterity() >= 5) {
 			item.grantPlayerItem(1);
@@ -2495,25 +2505,92 @@ public:
 		}
 	}
 
+	void pickName(character& player) {
+
+		std::string newName;
+		std::cout << "\nWhat is your name?\n";
+		std::getline(std::cin, newName);
+		player.setName(newName);
+
+	}
+	void pickSpeciality() {
+		bool specialityPicked = false;
+		int specialityChosen = '0';
+		while (!specialityPicked) {
+
+			std::cout << "\nPick a speciality: "
+				<< "\n1) Magic"
+				<< "\n2) Items"
+				<< "\n3) Melee"
+				<< "\n4) Defense\n";
+			std::cin >> specialityChosen;
+			
+
+			if(handleInputFailure("\Invalid Input, enter a number from 1-4")) {
+				continue;
+			}
+			if (specialityChosen > 4 || specialityChosen < 1) {
+				std::cout << "\Invalid Input, enter a number from 1-4";
+				continue;
+			}
+
+			switch (specialityChosen){
+			
+			case 1: // magic
+				bonusSpellSlots++;
+				bonusSpellDamage = 2;
+				playerSpeciality = "Magic";
+				specialityPicked = true;
+				break;
+			case 2: // items
+				bonusItemDamage = 2;
+				bonusFreeItemTurnChance = 5;
+				playerSpeciality = "Items";
+				specialityPicked = true;
+				break;
+			case 3: // melee
+				bonusMeleeDamage = 2;
+				bonusCritChance = 3;
+				bonusDefense = 2;
+				playerSpeciality = "Melee";
+				specialityPicked = true;
+				break;
+			case 4: // defense
+				bonusDefense = 5;
+				bonusHealth = 4;
+				playerSpeciality = "Defense";
+				specialityPicked = true;
+				break;
+			}
+			
+		}
+		
+	}
+
 
 
 int main() {
 	startMenu();
+	
 	srand(static_cast<unsigned int>(time(NULL)));
 
 	
 	spells spelltest;
-	enemy test;
-	character test1(0, 0, 0, 0, 0, 0);
-	statuseffects teststatus(test1, test);
 	
-	items testitem(teststatus);
+	character test1(0, 0, 0, 0, 0, 0);
+	pickName(test1);
+
+	
+	pickSpeciality();
 	test1.pickAttributes();
 	//clear();
-	startingBonus(test1,testitem,spelltest);
-	
-	
 
+
+	enemy test;
+	statuseffects teststatus(test1, test);
+
+	items testitem(teststatus);
+	startingBonus(test1, testitem, spelltest);
 	test.enemySet(20, 20, 1, 4, 10, 20, "beebie", test1);
 	shop shoptest(spelltest, testitem, test1, test);
 	combatHandler combat1(test1, test, spelltest, testitem, shoptest, teststatus);
