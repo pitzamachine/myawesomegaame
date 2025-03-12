@@ -14,6 +14,7 @@
 
 int intensity = 0;
 int input = 0;
+bool mainGameStarted = false;
 bool battling = true;
 double rolledNumber;
 int diceRoll;
@@ -21,6 +22,7 @@ int enemyRoll;
 int turnsElapsed = 0;
 int roundsPassed = 0;
 int roundsNeeded = 2;
+
 
 //bonus stats
 unsigned short bonusHealth = 0;
@@ -114,6 +116,44 @@ void setColor(int color) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 }
 
+void mainMenu() {
+
+	input = 0;
+	while (!mainGameStarted) {
+		std::cout << "\nWelcome to corvids, view the encyclopedia or start a new game!" <<
+			"\n(The encyclopedia offers help with understanding the games mechanics!)" <<
+			"\n1) New Game" <<
+			"\n2) Encyclopedia\n";
+
+		std::cin >> input;
+
+		if (handleInputFailure("\nPick option 1 or 2")) {
+			continue;
+
+		}
+		if (input > 2 || input < 1) {
+			std::cout << "\nPick a number 1 or 2";
+			continue;
+		}
+
+		switch (input) {
+
+		case 1:
+			mainGameStarted = true;
+			break;
+		case 2:
+			mainGameStarted = true;
+			break;
+
+		}
+
+		
+	}
+
+
+
+
+};
 
 class character {
 
@@ -2404,25 +2444,25 @@ void startingBonus(character& player, items& item, spells& spell) {
 			item.grantPlayerItem(8);
 			item.grantPlayerItem(8);
 			spell.grantPlayerSpell(20);
-			bonusCritChance = 1;
-			bonusIntensity = 1;
+			bonusCritChance += 1;
+			bonusIntensity += 1;
 			std::cout << "\nYour religion instills in you an odd obsession with blood.\n";
 
 		} 
 		if (player.getStrength() >= 8) {
 			spell.grantPlayerSpell(10);
 			bonusHealth += 1;
-			bonusCritChance = 1;
-			bonusMeleeDamage = 1;
+			bonusCritChance += 1;
+			bonusMeleeDamage += 1;
 			std::cout << "\nYou strength lets you send forth a damaging wave of energy, given the correct circumstances.\n";
 
 		}
 		if (player.getStrength() >= 3 && player.getEndurance() >= 3 && player.getDexterity() >= 3 && player.getLuck() >= 3) {
 			spell.grantPlayerSpell(18);
 			bonusHealth += 2;
-			bonusCritChance = 2;
-			bonusMeleeDamage = 1;
-			bonusRecycle = 1;
+			bonusCritChance += 2;
+			bonusMeleeDamage += 1;
+			bonusRecycle += 1;
 			bonusItemDamage = 1;
 			player.grantGold(4);
 			item.grantPlayerItem(0);
@@ -2436,9 +2476,9 @@ void startingBonus(character& player, items& item, spells& spell) {
 			item.grantPlayerItem(-1);
 			item.grantPlayerItem(-1);
 			item.grantPlayerItem(rand() % 8);
-			bonusIntensity = 2;
-			bonusCritChance = 6;
-			bonusItemDamage = 1;
+			bonusIntensity += 2;
+			bonusCritChance += 6;
+			bonusItemDamage += 1;
 			std::cout << "\nYou're just a really lucky person, maybe you're here because you're lucky, or maybe your luck is coming to an end.\n"
 				<< "Though, hard to say why you have 3 bowls.. I guess it was just luck";
 			player.grantGold(15);
@@ -2448,7 +2488,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 			//spell.grantPlayerSpell(14);
 			std::cout << "\nYou are a hulking mass, capable of nudging off all but the strongest of attacks...\n";
 			bonusHealth += 6;
-			bonusCritChance = 1;
+			bonusCritChance += 1;
 		}
 
 		if ((player.getFaith() + player.getWisdom()) >= 10) {
@@ -2464,8 +2504,8 @@ void startingBonus(character& player, items& item, spells& spell) {
 			item.grantPlayerItem(14);
 			item.grantPlayerItem(18);
 			player.grantGold(10);
-			bonusCritChance = 2;
-			bonusItemDamage = 1;
+			bonusCritChance += 2;
+			bonusItemDamage += 1;
 			std::cout << "\nYour unique attributes offer you some useful goods..";
 
 		}
@@ -2538,26 +2578,26 @@ void startingBonus(character& player, items& item, spells& spell) {
 			
 			case 1: // magic
 				bonusSpellSlots++;
-				bonusSpellDamage = 2;
+				bonusSpellDamage += 2;
 				playerSpeciality = "Magic";
 				specialityPicked = true;
 				break;
 			case 2: // items
-				bonusItemDamage = 2;
-				bonusFreeItemTurnChance = 5;
+				bonusItemDamage += 2;
+				bonusFreeItemTurnChance += 5;
 				playerSpeciality = "Items";
 				specialityPicked = true;
 				break;
 			case 3: // melee
-				bonusMeleeDamage = 2;
-				bonusCritChance = 3;
-				bonusDefense = 2;
+				bonusMeleeDamage += 2;
+				bonusCritChance += 3;
+				bonusDefense += 2;
 				playerSpeciality = "Melee";
 				specialityPicked = true;
 				break;
 			case 4: // defense
-				bonusDefense = 5;
-				bonusHealth = 4;
+				bonusDefense += 5;
+				bonusHealth += 4;
 				playerSpeciality = "Defense";
 				specialityPicked = true;
 				break;
@@ -2571,16 +2611,15 @@ void startingBonus(character& player, items& item, spells& spell) {
 
 int main() {
 	startMenu();
+	mainMenu();
 	
-	srand(static_cast<unsigned int>(time(NULL)));
 
-	
-	spells spelltest;
-	
 	character test1(0, 0, 0, 0, 0, 0);
 	pickName(test1);
 
-	
+	srand(static_cast<unsigned int>(time(NULL)));
+
+	spells spelltest;
 	pickSpeciality();
 	test1.pickAttributes();
 	//clear();
