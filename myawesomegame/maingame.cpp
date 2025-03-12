@@ -348,6 +348,7 @@ public:
 	struct spellEffect {
 		int damage = 0;
 		int healing = 0;
+		int selfDamage = 0;
 	};
 	spellEffect effect;
 	char displaySpellMenu(character& player) {
