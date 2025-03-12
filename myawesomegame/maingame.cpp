@@ -25,7 +25,10 @@ int roundsNeeded = 2;
 //bonus stats
 unsigned short bonusHealth = 0;
 unsigned short bonusIntensity = 0;
-
+unsigned short bonusCritChance = 0;
+unsigned short bonusMeleeDamage = 0;
+unsigned short bonusRecycle = 0;
+unsigned short bonusItemDamage = 0;
 
 
 
@@ -303,12 +306,12 @@ public:
 		int damage = baseDamage * calcDamageVariance();
 		if (damage < minimumDamage) damage = minimumDamage;
 		
-		return damage;
+		return damage + bonusMeleeDamage;
 	}
 
 	bool criticalCalculator() {
 
-		double critChance = 3 + luck + faith / 3 + dexterity/4;  // determine crit chance
+		double critChance = 3 + luck + faith / 3 + dexterity/4 + bonusCritChance;  // determine crit chance
 		if (critChance > 93) critChance = 93;
 		rolledNumber = rand() % 100;
 		bool criticalHit = (critChance > rolledNumber);
@@ -336,6 +339,7 @@ public:
 	float statusApplyChance = 0.05;
 	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both, 3 is neither, 4 is strength, 5 is dex?
 	std::string spellName = "default";
+	short intensityChange = 0;
 	std::vector<char> spellsKnown;
 	
 
@@ -413,7 +417,7 @@ public:
 
 	void updateSpell(char SpellId) {
 		healthCost = 0;
-		
+		intensityChange = 0;
 		switch (SpellId) {
 
 
@@ -460,7 +464,7 @@ public:
 			break;
 
 		case 4:
-			baseHealing = 7;
+			baseHealing = 13;
 			baseDamage = 0;
 			spellName = "Minor Heal";
 			attributePowerModifier = 0.98f;
@@ -481,7 +485,7 @@ public:
 			break;
 
 		case 6:
-			baseHealing = 15;
+			baseHealing = 22;
 			baseDamage = 0;
 			spellName = "Heal";
 			attributePowerModifier = 1.35f;
@@ -552,17 +556,17 @@ public:
 			healthCost = 9;
 			baseDamage = 15;
 			spellName = "Blind Rage";
-			attributePowerModifier = 0.45f;
+			attributePowerModifier = 0.65f;
 			scalingAttribute = '4'; // strength
 			spellSlotCost = 1;
 			spellPrice = 25;
 			break;
 		case 14:
-			baseHealing = 2;
-			healthCost = 3;
+			baseHealing = 5;
+			healthCost = 10;
 			baseDamage = 0;
 			spellName = "Monk's Healing";
-			attributePowerModifier = 0.25f;
+			attributePowerModifier = 1.85f;
 			scalingAttribute = '7'; // end faith
 			spellSlotCost = 1;
 			spellPrice = 12;
@@ -588,6 +592,49 @@ public:
 			scalingAttribute = '5'; // dex 
 			spellSlotCost = 1;
 			spellPrice = 20;
+			break;
+
+		case 17:
+			baseHealing = 0;
+			healthCost = 3;
+			baseDamage = 35;
+			spellName = "Fist of Fire";
+			attributePowerModifier = 1.35f;
+			scalingAttribute = '4'; // strength
+			spellSlotCost = 3;
+			spellPrice = 50;
+			intensityChange = 4;
+			break;
+		case 18:
+			baseHealing = 0;
+			baseDamage = 3;
+			attributePowerModifier = 1.45f;
+			spellName = "Frozen Gust"; // wisdom
+			scalingAttribute = '0';
+			spellSlotCost = 1;
+			spellPrice = 25;
+			intensityChange = -2;
+			break;
+		case 19:
+			baseHealing = 0;
+			baseDamage = 20;
+			attributePowerModifier = 1.95f;
+			spellName = "Inferno"; // wisdom
+			scalingAttribute = '0';
+			spellSlotCost = 3;
+			spellPrice = 75;
+			intensityChange = 5;
+			break;
+		case 20:
+			baseHealing = 0;
+			baseDamage = 3;
+			healthCost = 5;
+			attributePowerModifier = 1.1f;
+			spellName = "Blood Dart"; 
+			scalingAttribute = '5'; //dex scaling
+			spellSlotCost = 0;
+			spellPrice = 15;
+			intensityChange = 0;
 			break;
 
 
@@ -653,10 +700,37 @@ public:
 
 	spellEffect calculateSpellPower(character& player, bool display) {
 
+		if (intensityChange != 0 && !display) {
+			int newIntensity = intensity + intensityChange;
+			if (newIntensity < 0) {
+				std::cout << "\nThings can't get any calmer.\n";
+				intensity = 0;
+			}
+			else
+			{
+				intensity = newIntensity;
+				if (intensityChange > 0) {
+					std::cout << "\nThe world grows more restless\n";
+				}
+				else if (intensityChange < 0) {
+					std::cout << "\nThe world calms..\n";
+				}
+			}
+
+		}
+
 
 		spellEffect effect;
+		intensity += intensityChange;
 		int finalDamage = 0;
-		effect.selfDamage = healthCost;
+		if (id == 14) {
+			effect.selfDamage = player.playerMaxHealth/10;
+		}
+		else {
+			effect.selfDamage = healthCost;
+
+		}
+		
 		if (baseHealing > 0) {
 			int finalHealing = baseHealing + powerModifier(player);
 			effect.healing = finalHealing;
@@ -1194,10 +1268,11 @@ public:
 
 			itemName = "Prayer Bead";
 			itemHealingPower = 0;
-			itemCost = 5;
+			itemCost = 6;
 			scalingType = "attribute";
 			attributeScale = "faith";
 			itemType = "damage";
+			itemQuantity = 2;
 			itemDamage = 2;
 			attributeScalingFactor = 0.50f;
 
@@ -1397,7 +1472,6 @@ public:
 				}
 			}
 
-
 		}
 
 		if (itemType == "healing" && player.playerHealth < player.playerMaxHealth) {
@@ -1460,12 +1534,12 @@ public:
 			}
 			std::cout << "Your item does " << finalItemDamage << " Damage!";
 
-			opponent.takeDamage(finalItemDamage);
+			opponent.takeDamage(finalItemDamage + bonusItemDamage);
 			if (id == 1 || id == 8 || id == 14) {
 			label_name: //i've never used go to, but I was too lazy to make a while loop. Have fun throwing a ton of daggers.
 
-				float multiDaggerChance = player.dexterity / 2.5;
-				if (multiDaggerChance > 20) multiDaggerChance = 20;
+				float multiDaggerChance = player.dexterity / 1.8;
+				if (multiDaggerChance > 24) multiDaggerChance = 24;
 				rolledNumber = rand() % 101;
 				if (multiDaggerChance > rolledNumber) {
 					finalItemDamage /= 1.5;
@@ -1520,7 +1594,7 @@ private:
 	bool spellsGenerated = false;
 	bool doneShopping = false;
 	bool shopUpgraded = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16, 17, 18, 19, 20 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -1719,7 +1793,7 @@ public:
 		int manageChoice;
 		int actionChoice;
 		bool itemManaged = false;
-		maxRecycleCount = 2 + player.getLuck() / 5;
+		maxRecycleCount = 2 + player.getLuck() / 5 + bonusRecycle;
 		
 		shopItem.displayItemMenu(player, opponent);
 		if (shopItem.itemsHeld.empty()) {
@@ -1769,7 +1843,7 @@ public:
 				itemManaged = true;
 				break;
 			case 2: {
-				int recycleCost = 5 + recycleCount * 2;
+				int recycleCost = (5 + recycleCount * 2) - bonusRecycle;
 				if (recycleCount < maxRecycleCount) {
 					if (player.gold >= recycleCost) {
 						player.gold -= recycleCost;
@@ -2212,6 +2286,7 @@ public:
 						if (effect.selfDamage > 0) {
 							player.playerHealth -= spell.healthCost;
 							std::cout << "\nYou take " << spell.healthCost << " damage due to " << spell.spellName;
+							intensity--; //neutral intensity on healing spells
 						}
 
 							if (effect.damage > 0) {
@@ -2310,22 +2385,50 @@ public:
 			item.grantPlayerItem(1);
 			item.grantPlayerItem(1);
 			item.grantPlayerItem(1);
+			
 			std::cout << "\nYour dexterity grants you a free trio of throwing daggers.\n";
 
 		}
 		 
+		if ((player.getDexterity() + player.getFaith()) >= 11 && player.getFaith() >= 4 && player.getDexterity() >= 3) {
+			item.grantPlayerItem(8);
+			item.grantPlayerItem(8);
+			spell.grantPlayerSpell(20);
+			bonusCritChance = 1;
+			bonusIntensity = 1;
+			std::cout << "\nYour religion instills in you an odd obsession with blood.\n";
+
+		} 
 		if (player.getStrength() >= 8) {
 			spell.grantPlayerSpell(10);
 			bonusHealth += 1;
+			bonusCritChance = 1;
+			bonusMeleeDamage = 1;
 			std::cout << "\nYou strength lets you send forth a damaging wave of energy, given the correct circumstances.\n";
 
 		}
+		if (player.getStrength() >= 3 && player.getEndurance() >= 3 && player.getDexterity() >= 3 && player.getLuck() >= 3) {
+			spell.grantPlayerSpell(18);
+			bonusHealth += 2;
+			bonusCritChance = 2;
+			bonusMeleeDamage = 1;
+			bonusRecycle = 1;
+			bonusItemDamage = 1;
+			player.grantGold(4);
+			item.grantPlayerItem(0);
+			item.grantPlayerItem(1);
+			std::cout << "\nYou're well rounded, but somewhat bland..\n";
+
+		}
+
 		if (player.getLuck() == 15) {
 			item.grantPlayerItem(-1);
 			item.grantPlayerItem(-1);
 			item.grantPlayerItem(-1);
 			item.grantPlayerItem(rand() % 8);
 			bonusIntensity = 2;
+			bonusCritChance = 6;
+			bonusItemDamage = 1;
 			std::cout << "\nYou're just a really lucky person, maybe you're here because you're lucky, or maybe your luck is coming to an end.\n"
 				<< "Though, hard to say why you have 3 bowls.. I guess it was just luck";
 			player.grantGold(15);
@@ -2334,8 +2437,8 @@ public:
 		if (player.getEndurance() > 11) {
 			//spell.grantPlayerSpell(14);
 			std::cout << "\nYou are a hulking mass, capable of nudging off all but the strongest of attacks...\n";
-			bonusHealth += 5;
-
+			bonusHealth += 6;
+			bonusCritChance = 1;
 		}
 
 		if ((player.getFaith() + player.getWisdom()) >= 10) {
@@ -2344,13 +2447,15 @@ public:
 			std::cout << "\nYour arcane knowledge grants you insight on a spell!";
 
 		}
-		if ((player.getLuck() + player.getDexterity()) >= 12  && player.getDexterity() > 3) {
+		if ((player.getLuck() + player.getDexterity()) >= 12 && player.getDexterity() > 3 && player.getLuck() > 3) {
 
 			item.grantPlayerItem(1);
 			item.grantPlayerItem(8);
 			item.grantPlayerItem(14);
 			item.grantPlayerItem(18);
 			player.grantGold(10);
+			bonusCritChance = 2;
+			bonusItemDamage = 1;
 			std::cout << "\nYour unique attributes offer you some useful goods..";
 
 		}
@@ -2359,7 +2464,7 @@ public:
 		if (player.getEndurance() >= 6) {
 			item.grantPlayerItem(5);
 			item.grantPlayerItem(19);
-			bonusHealth += 2;
+			bonusHealth += 3;
 			std::cout << "\nYou grew up healthier than most, you left on your adventure with a bowl of soup and a potion!\n";
 
 		}
