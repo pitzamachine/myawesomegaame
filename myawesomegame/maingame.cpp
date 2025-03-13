@@ -137,7 +137,7 @@ void generateRandomTip() {
 	tips[7] = "\nYou can recycle items at a chance for a better one.";
 	tips[8] = "\nTemporary spell slots can be used to cast spells, even if you have no wisdom or faith";
 	tips[9] = "\nWonder balls can heal you, deal damage, and raise the intensity, they really are wonderful!";
-	tips[10] = "\nYou can fill up bowls to get more soup.";
+	tips[10] = "\nBowls can be refilled via the refill option when managing items.";
 	tips[11] = "\nYou get bonuses for starting with certain levels in attributes, try starting with more than 8 strength!";
 	tips[12] = "\nDepending on your luck level, theres a chance you'll get 2 turns when using an item!";
 	tips[13] = "\nCalm Feathers, Grand Hammers, and the spell Frozen Gust reduce the intensity, for breathing room.";
@@ -181,7 +181,7 @@ void encyclopedia() {
 		case 1:
 			outEncyclopedia = false;
 			std::cout << "\n--- Attributes ---\n";
-				
+			std::cout << "";
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			std::cin.get();
 			break;
@@ -242,7 +242,7 @@ void mainMenu() {
 			mainGameStarted = true;
 			break;
 		case 2:
-			if (outEncyclopedia = true)
+			
 			encyclopedia();
 			mainGameStarted = false;
 			break;
