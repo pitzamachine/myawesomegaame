@@ -16,6 +16,7 @@ int intensity = 0;
 int input = 0;
 bool mainGameStarted = false;
 bool battling = true;
+bool outEncyclopedia = false;
 double rolledNumber;
 int diceRoll;
 int enemyRoll;
@@ -112,15 +113,114 @@ bool handleInputFailure(const std::string& errorMessage) {
 	return false; // No failure
 }
 
+void attributeInformation(int choice) {
+
+
+
+}
+
 void setColor(int color) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 }
+
+void generateRandomTip() {
+
+	std::string tips[20];
+
+	tips[0] = "\nIntensity rises every turn, but certain items and spells can raise or decrease it!";
+	tips[1] = "\nIntensity increases damage dealt, and taken, be careful with letting battles drag on!";
+	tips[2] = "\nFor approximately every 3 wisdom levels and every 5 faith levels, you get an extra spell slot.";
+	tips[3] = "\nSome items have scaling, meaning they do more damage based of your attributes or current intensity";
+	tips[4] = "\nYour chance to flee is higher when battle starts, but after intensity reaches 10, your chances drop.";
+	tips[5] = "\nThrowing daggers have a chance to strike twice or more, depending on your dexterity level";
+	tips[6] = "\nThere is a spell for each attribute, and some attributes have many spells!";
+	tips[7] = "\nYou can recycle items at a chance for a better one.";
+	tips[8] = "\nTemporary spell slots can be used to cast spells, even if you have no wisdom or faith";
+	tips[9] = "\nWonder balls can heal you, deal damage, and raise the intensity, they really are wonderful!";
+	tips[10] = "\nYou can fill up bowls to get more soup.";
+	tips[11] = "\nYou get bonuses for starting with certain levels in attributes, try starting with more than 8 strength!";
+	tips[12] = "\nDepending on your luck level, theres a chance you'll get 2 turns when using an item!";
+	tips[13] = "\nCalm Feathers, Grand Hammers, and the spell Frozen Gust reduce the intensity, for breathing room.";
+	tips[14] = "\nThere are no bad choices when making a character";
+	tips[15] = "\nYour dexterity and your luck affect your odds at escape.";
+	tips[16] = "\nFinishing off enemies quickly grants you more gold.";
+	tips[17] = "\nYou are fully restored when leveling up, but don't forget to heal still!";
+	tips[18] = "\nAll healing spells, whether they also do damage or not, do not increase intensity";
+	tips[19] = "\nLuck based attacks have widely varying damage, and the maximum damage increases with luck.";
+	int selectedTip = 0;
+	selectedTip = rand() % 20;
+	setColor(3);
+	std::cout << tips[selectedTip] << std::endl;
+	setColor(7);
+}
+
+void encyclopedia() {
+	outEncyclopedia = false;
+	while (!outEncyclopedia) {
+		std::cout << "\nWelcome to the encyclopedia, pick an option to learn more" <<
+			"\n(This information is good to know, but not absolutely necessary to succeed.)" <<
+			"\n1) Attributes" <<
+			"\n2) Starting Bonuses" << 
+			"\n3) Tips" <<
+
+			"\n4) Back\n";
+
+		std::cin >> input;
+
+		if (handleInputFailure("\nPick option 1 to 3")) {
+			continue;
+
+		}
+		if (input > 4 || input < 1) {
+			std::cout << "\nPick a number 1 to 4";
+			continue;
+		}
+
+		switch (input) {
+
+		case 1:
+			outEncyclopedia = false;
+			std::cout << "\n--- Attributes ---\n";
+				
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			std::cin.get();
+			break;
+		case 2:
+			outEncyclopedia = false;
+			std::cout << "\n--- Starting Bonuses ---\n";
+				
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			std::cin.get();
+			break;
+
+		case 3:
+		
+			generateRandomTip();
+			outEncyclopedia = false;
+			break;
+
+		case 4:
+
+			outEncyclopedia = true;
+			break;
+
+		
+		}
+
+
+
+	}
+
+
+
+
+};
 
 void mainMenu() {
 
 	input = 0;
 	while (!mainGameStarted) {
-		std::cout << "\nWelcome to corvids, view the encyclopedia or start a new game!" <<
+		std::cout << "\nWelcome to Corvids, view the encyclopedia or start a new game!" <<
 			"\n(The encyclopedia offers help with understanding the games mechanics!)" <<
 			"\n1) New Game" <<
 			"\n2) Encyclopedia\n";
@@ -142,7 +242,9 @@ void mainMenu() {
 			mainGameStarted = true;
 			break;
 		case 2:
-			mainGameStarted = true;
+			if (outEncyclopedia = true)
+			encyclopedia();
+			mainGameStarted = false;
 			break;
 
 		}
@@ -154,6 +256,7 @@ void mainMenu() {
 
 
 };
+
 
 class character {
 
@@ -213,7 +316,8 @@ public:
 
 		std::cout << "Player Name: " << name << std::endl
 			<< "Level: " << level << "\n"
-			<< "Experience: " << experience << "/" << experienceToNext 
+			<< "Experience: " << experience << "/" << experienceToNext
+			<< "Speciality: " << playerSpeciality
 
 			<< "\nGold: " << gold
 		 << "\nMax Health: " << playerMaxHealth << std::endl
@@ -1407,9 +1511,9 @@ public:
 			itemQuantity = 3;
 			scalingType = "both";
 			itemType = "damage";
-			itemVariance = 3;
-			intensityScaleFactor = 0.02f;
-			attributeScalingFactor = 0.3f;
+			itemVariance = 2;
+			intensityScaleFactor = 0.01f;
+			attributeScalingFactor = 0.1f;
 			itemHealingPower = 0;
 			attributeScale = "luck";
 			intensityChange = 0;
@@ -1580,7 +1684,7 @@ public:
 			}
 			if (itemVariance != 1.0) {
 
-				finalItemDamage *= rand() % static_cast<int>((itemVariance + player.luck / 2));
+				finalItemDamage *= rand() % static_cast<int>((itemVariance + player.luck / 3));
 			}
 			std::cout << "Your item does " << finalItemDamage << " Damage!";
 
@@ -2547,10 +2651,14 @@ void startingBonus(character& player, items& item, spells& spell) {
 
 	void pickName(character& player) {
 
-		std::string newName;
-		std::cout << "\nWhat is your name?\n";
-		std::getline(std::cin, newName);
-		player.setName(newName);
+		std::string newName = "";
+		while (newName == "") {
+			std::cout << "\nWhat is your name?\n";
+			std::getline(std::cin, newName);
+			player.setName(newName);
+
+		}
+		
 
 	}
 	void pickSpeciality() {
@@ -2562,7 +2670,8 @@ void startingBonus(character& player, items& item, spells& spell) {
 				<< "\n1) Magic"
 				<< "\n2) Items"
 				<< "\n3) Melee"
-				<< "\n4) Defense\n";
+				<< "\n4) Defense\n"
+				<< "\n5) Control (not yet implemented)\n";
 			std::cin >> specialityChosen;
 			
 
@@ -2610,6 +2719,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 
 
 int main() {
+	srand(static_cast<unsigned int>(time(NULL)));
 	startMenu();
 	mainMenu();
 	
@@ -2617,7 +2727,7 @@ int main() {
 	character test1(0, 0, 0, 0, 0, 0);
 	pickName(test1);
 
-	srand(static_cast<unsigned int>(time(NULL)));
+
 
 	spells spelltest;
 	pickSpeciality();
