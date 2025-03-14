@@ -251,7 +251,7 @@ struct statusEffect {
 
 	std::string name;
 	std::string actionName;
-	char statusId = '0';
+	short statusId = 0;
 	char type = 'h';
 	unsigned short strengthValue = 0;
 	unsigned short duration = 0;
@@ -646,7 +646,7 @@ public:
 		statusEffect newEffect;
 		switch (statusId) {
 	
-		case '0':
+		case 0:
 			newEffect.name = "Endurance Boost";
 			newEffect.actionName = "Endurance";
 			newEffect.statusId = '0';
@@ -655,7 +655,7 @@ public:
 			newEffect.duration = 4;
 			newEffect.buffTarget = '0';
 			break;
-		case '1':
+		case 1:
 			newEffect.name = "Strength Boost";
 			newEffect.actionName = "Feeling Strong";
 			newEffect.statusId = '1';
@@ -664,7 +664,7 @@ public:
 			newEffect.duration = 4;
 			newEffect.buffTarget = '1';
 			break;
-		case '2':
+		case 2:
 			newEffect.name = "Dexterity Boost";
 			newEffect.actionName = "Dexterity";
 			newEffect.statusId = '2';
@@ -673,7 +673,7 @@ public:
 			newEffect.duration = 4;
 			newEffect.buffTarget = '2';
 			break;
-		case '3':
+		case 3:
 			newEffect.name = "Wisdom Boost";
 			newEffect.actionName = "Feeling smart";
 			newEffect.statusId = '3';
@@ -682,7 +682,7 @@ public:
 			newEffect.duration = 4;
 			newEffect.buffTarget = '3';
 			break;
-		case '4':
+		case 4:
 			newEffect.name = "Luck Boost";
 			newEffect.actionName = "Feeling lucky";
 			newEffect.statusId = '4';
@@ -691,7 +691,7 @@ public:
 			newEffect.duration = 4;
 			newEffect.buffTarget = '4';
 			break;
-		case '5':
+		case 5:
 			newEffect.name = "Faith Boost";
 			newEffect.actionName = "Faithfulness";
 			newEffect.statusId = '5';
@@ -700,7 +700,7 @@ public:
 			newEffect.duration = 4;
 			newEffect.buffTarget = '5';
 			break;
-		case '6':
+		case 6:
 			newEffect.name = "Minor Regeneration";
 			newEffect.actionName = "Minor Regeneration";
 			newEffect.statusId = '6';
@@ -1384,7 +1384,7 @@ private:
 	int spellSlotsRestored = 0;
 	float itemVariance = 1.0f;
 	int itemBecomes = 0;
-	char statusEffectIdGiven = '-1';
+	int statusEffectIdGiven = '-1';
 	bool hasStatus = false;
 	bool itemTransforms = false;
 	bool canRefill = false;
@@ -1445,7 +1445,7 @@ public:
 	void updateItem(char itemId){
 		itemHealingPower = 0;
 		hasStatus = false;
-		statusEffectIdGiven = '-1';
+		statusEffectIdGiven = -1;
 		itemVariance = 1.0f;
 		itemQuantity = 1;
 		spellSlotsRestored = 0;
@@ -1689,6 +1689,7 @@ public:
 			attributeScalingFactor = 0.0f;
 			itemHealingPower = 12;
 			attributeScale = "static";
+			statusEffectIdGiven = -1;
 			itemBecomes = -1;
 			intensityChange = 0;
 			itemTransforms = true;
@@ -1699,7 +1700,7 @@ public:
 			itemDamage = 0;
 			scalingType = "attribute";
 			itemType = "healing";
-			statusEffectIdGiven = '1';
+			statusEffectIdGiven = 1;
 			attributeScalingFactor = 0.0f;
 			intensityScaleFactor = 0.0f;
 			itemHealingPower = 2;
@@ -1714,7 +1715,7 @@ public:
 			itemDamage = 0;
 			scalingType = "attribute";
 			itemType = "healing";
-			statusEffectIdGiven = '6';
+			statusEffectIdGiven = 6;
 			attributeScalingFactor = 0.0f;
 			intensityScaleFactor = 0.0f;
 			itemHealingPower = 2;
@@ -1782,7 +1783,9 @@ public:
 	};
 
 	void useItem(char itemUsed, character& player, enemy& opponent) {
+		bool itemHasBeenUsed = false;
 		updateItem(itemUsed);
+	
 
 		if (intensityChange != 0) {
 			int newIntensity = intensity + intensityChange;
@@ -1805,16 +1808,17 @@ public:
 
 		if (itemType == "healing" && player.playerHealth < player.playerMaxHealth) {
 			float totalHealing = itemHealingPower * (1 + player.endurance / 25);
-			
+			itemHasBeenUsed = true;
 			if (totalHealing != 0) {
 				player.playerHealth += totalHealing; // you should replace this with a player.heal function
 				std::cout << "\nYou gain " << totalHealing << " Health Points!\n";
 			}
 			
 			
-			if (statusEffectIdGiven != '-1') {
+			if (statusEffectIdGiven != -1) {
+			
 				status.grantStatusEffect(player, opponent, true, statusEffectIdGiven);
-				itemsHeld.erase(itemsHeld.begin() + (input - 1));
+				
 
 			}
 
@@ -1833,13 +1837,12 @@ public:
 			
 
 		}
-		if (itemType == "buff") {
 		
-		}
 		if (itemType == "damage") {
 			int finalItemDamage = itemDamage;
 			int scalingCode = getScalingTypeCode(scalingType);
 			int attribute = getPlayerAttribute(player, attributeScale);
+			itemHasBeenUsed = true;
 			if (itemHealingPower > 0) {
 				player.playerHealth += itemHealingPower; // you should replace this with a player.heal function
 				std::cout << "\nYou gain " << itemHealingPower << " Health Points!";
@@ -1898,7 +1901,7 @@ public:
 
 
 		}
-		if (itemTransforms) {
+		if (itemTransforms && itemHasBeenUsed) {
 			itemsHeld.push_back(itemBecomes);
 			updateItem(itemBecomes);
 			std::cout << "\nYou get a " << itemName << "!";
@@ -2058,7 +2061,7 @@ public:
 		
 		for (int i = 1; i <= objectsAvailable; i++) { 
 				
-			int randomItemId = rand() % 20; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
+			int randomItemId = rand() % 22; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
 			//bool isPair = (rand() % 100 < 20);
 			if(!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
 		
@@ -2230,7 +2233,7 @@ public:
 
 	void refillOptionMenu(int manageChoice) {
 		bool containerFilled = false;
-		int refillChoice = 0;
+		int refillChoice;
 		while (!containerFilled) {
 			std::cout << "\nWhat would you like to fill your container with?\n"
 				<<"\n1)Soup ( 3g )"
@@ -2239,7 +2242,7 @@ public:
 
 			std::cin >> refillChoice;
 
-			if (handleInputFailure("") || input > 3 || input < 1) {
+			if (handleInputFailure("") || refillChoice > 3 || refillChoice < 1) {
 				std::cout << "\nInput a number 1 - 3";
 				continue;
 			}
