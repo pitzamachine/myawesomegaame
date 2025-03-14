@@ -255,7 +255,8 @@ struct statusEffect {
 	char type = 'h';
 	unsigned short strengthValue = 0;
 	unsigned short duration = 0;
-	std::string buffTarget;
+	char buffTarget = '0';
+	bool buffApplied = false;
 
 
 };
@@ -629,7 +630,7 @@ private:
 	char defaultType = 'h'; //h for healing over time, d for damage over time, b for buff, f for debuff
 	unsigned short defaultStrengthValue = 0;
 	unsigned short defaultDuration = 0;
-	std::string defaultBuffTarget = "dexterity";
+	char defaultBuffTarget = '0'; //6 stats, so 6 values,
 	
 
 
@@ -644,23 +645,69 @@ public:
 	void grantStatusEffect(character& player,enemy& opponent,bool onPlayer, char statusId){
 		statusEffect newEffect;
 		switch (statusId) {
+	
 		case '0':
-			newEffect.name = "Strength Boost";
-			newEffect.actionName = "Feeling Strong";
+			newEffect.name = "Endurance Boost";
+			newEffect.actionName = "Endurance";
 			newEffect.statusId = '0';
 			newEffect.type = 'b';
-			newEffect.strengthValue = 3;
-			newEffect.duration = 3;
-			newEffect.buffTarget = "strength";
+			newEffect.strengthValue = 5;
+			newEffect.duration = 4;
+			newEffect.buffTarget = '0';
 			break;
 		case '1':
+			newEffect.name = "Strength Boost";
+			newEffect.actionName = "Feeling Strong";
+			newEffect.statusId = '1';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 3;
+			newEffect.duration = 4;
+			newEffect.buffTarget = '1';
+			break;
+		case '2':
+			newEffect.name = "Dexterity Boost";
+			newEffect.actionName = "Dexterity";
+			newEffect.statusId = '2';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 3;
+			newEffect.duration = 4;
+			newEffect.buffTarget = '2';
+			break;
+		case '3':
+			newEffect.name = "Wisdom Boost";
+			newEffect.actionName = "Feeling smart";
+			newEffect.statusId = '3';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 3;
+			newEffect.duration = 4;
+			newEffect.buffTarget = '3';
+			break;
+		case '4':
+			newEffect.name = "Luck Boost";
+			newEffect.actionName = "Feeling lucky";
+			newEffect.statusId = '4';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 4;
+			newEffect.duration = 4;
+			newEffect.buffTarget = '4';
+			break;
+		case '5':
+			newEffect.name = "Faith Boost";
+			newEffect.actionName = "Faithfulness";
+			newEffect.statusId = '5';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 4;
+			newEffect.duration = 4;
+			newEffect.buffTarget = '5';
+			break;
+		case '6':
 			newEffect.name = "Minor Regeneration";
 			newEffect.actionName = "Minor Regeneration";
-			newEffect.statusId = '1';
+			newEffect.statusId = '6';
 			newEffect.type = 'h';
-			newEffect.strengthValue = 3;
-			newEffect.duration = 2;
-			newEffect.buffTarget = "none";
+			newEffect.strengthValue = 2;
+			newEffect.duration = 6;
+			newEffect.buffTarget = '-1';
 			break;
 		default:
 			break;
@@ -673,12 +720,74 @@ public:
 		}
 
 	}
-	
+
+	void changeBuffedStat(int strength, char stat) {
+		
+		switch (stat) {
+
+		case '0':
+			player.endurance += strength;
+			break;
+		case '1':
+			player.strength += strength;
+
+			break;
+		case '2':
+			player.dexterity += strength;
+			break;
+		case '3':
+			player.wisdom += strength;
+			break;
+		case '4':
+			player.luck += strength;
+			break;
+		case '5':
+			player.faith += strength;
+			break;
+		default:
+			break;
+
+
+		}
+
+	}
+	void removeBuffedStat(int strength, char stat) {
+
+		switch (stat) {
+
+		case '0':
+			player.endurance -= strength;
+			break;
+		case '1':
+			player.strength -= strength;
+			break;
+		case '2':
+			player.dexterity -= strength;
+			break;
+		case '3':
+			player.wisdom -= strength;
+			break;
+		case '4':
+			player.luck -= strength;
+			break;
+		case '5':
+			player.faith -= strength;
+			break;
+		default:
+			break;
+
+
+		}
+
+	}
 
 	void tickPlayerStatus() {
 		if (!playerStatuses.empty()) {
 			for (auto it = playerStatuses.begin(); it != playerStatuses.end(); ) {
 				if (it->duration == 0) {
+					if (it->buffApplied) {
+						removeBuffedStat(it->strengthValue, it->buffTarget);
+					}
 					std::cout << "\n" << it->name << " ran out";
 					it = playerStatuses.erase(it); 
 				}
@@ -689,8 +798,11 @@ public:
 						it->duration--;
 					}
 					if (it->type == 'b') {
+						if (!it->buffApplied) {
+							changeBuffedStat(it->strengthValue, it->buffTarget);
+							it->buffApplied = true;
+						}
 						
-					
 						it->duration--;
 					}
 					++it;  
@@ -1038,7 +1150,7 @@ public:
 			spellName = "Weak Regeneration";
 			attributePowerModifier = 1.05f;
 			scalingAttribute = '1'; // faith
-			statusEffectId = '1';
+			statusEffectId = '6';
 			statusApplyChance = 100.0f;
 			statusOnPlayer = true;
 			spellSlotCost = 1;
@@ -1272,7 +1384,7 @@ private:
 	int spellSlotsRestored = 0;
 	float itemVariance = 1.0f;
 	int itemBecomes = 0;
-	char statusEffectIdGiven = 0;
+	char statusEffectIdGiven = '-1';
 	bool hasStatus = false;
 	bool itemTransforms = false;
 	bool canRefill = false;
@@ -1333,7 +1445,7 @@ public:
 	void updateItem(char itemId){
 		itemHealingPower = 0;
 		hasStatus = false;
-		statusEffectIdGiven = 0;
+		statusEffectIdGiven = '-1';
 		itemVariance = 1.0f;
 		itemQuantity = 1;
 		spellSlotsRestored = 0;
@@ -1353,7 +1465,6 @@ public:
 			intensityScaleFactor = 0;
 			itemHealingPower = 0;
 			canRefill = true;
-			itemBecomes = 19; //bowl of soup
 			itemCost = 3;
 			break;
 
@@ -1576,7 +1687,7 @@ public:
 			itemVariance = 0;
 			intensityScaleFactor = 0.0f;
 			attributeScalingFactor = 0.0f;
-			itemHealingPower = 10;
+			itemHealingPower = 12;
 			attributeScale = "static";
 			itemBecomes = -1;
 			intensityChange = 0;
@@ -1587,15 +1698,30 @@ public:
 			itemName = "Bowl of Strength Potion";
 			itemDamage = 0;
 			scalingType = "attribute";
-			itemType = "buff";
-			statusEffectIdGiven = 0;
+			itemType = "healing";
+			statusEffectIdGiven = '1';
 			attributeScalingFactor = 0.0f;
 			intensityScaleFactor = 0.0f;
-			itemHealingPower = 0;
+			itemHealingPower = 2;
 			intensityChange = 0;
 			itemBecomes = -1;
 			itemTransforms = true;
 			itemCost = 16;
+
+			break;
+		case 21:
+			itemName = "Bowl of Weak Regeneration";
+			itemDamage = 0;
+			scalingType = "attribute";
+			itemType = "healing";
+			statusEffectIdGiven = '6';
+			attributeScalingFactor = 0.0f;
+			intensityScaleFactor = 0.0f;
+			itemHealingPower = 2;
+			intensityChange = 0;
+			itemBecomes = -1;
+			itemTransforms = true;
+			itemCost = 10;
 
 			break;
 		default:
@@ -1679,9 +1805,18 @@ public:
 
 		if (itemType == "healing" && player.playerHealth < player.playerMaxHealth) {
 			float totalHealing = itemHealingPower * (1 + player.endurance / 25);
-			player.playerHealth += totalHealing; // you should replace this with a player.heal function
-			std::cout << "\nYou gain " << totalHealing << " Health Points!\n";
 			
+			if (totalHealing != 0) {
+				player.playerHealth += totalHealing; // you should replace this with a player.heal function
+				std::cout << "\nYou gain " << totalHealing << " Health Points!\n";
+			}
+			
+			
+			if (statusEffectIdGiven != '-1') {
+				status.grantStatusEffect(player, opponent, true, statusEffectIdGiven);
+				itemsHeld.erase(itemsHeld.begin() + (input - 1));
+
+			}
 
 			if (spellSlotsRestored > 0) {
 				player.spellsAvailable += spellSlotsRestored;
@@ -1699,8 +1834,7 @@ public:
 
 		}
 		if (itemType == "buff") {
-			//status.grantStatusEffect(player, opponent, true, 0);
-			itemsHeld.erase(itemsHeld.begin() + (input - 1));
+		
 		}
 		if (itemType == "damage") {
 			int finalItemDamage = itemDamage;
@@ -2023,7 +2157,7 @@ public:
 				<< "\nRecycles used: " << recycleCount << "/" << maxRecycleCount << "\n"
 				<< "\n1) Throw away"
 				<< "\n2) Recycle"
-				<< "\n3) Refill (only for containers) (" << shopItem.itemCost << " gold)"
+				<< "\n3) Refill (only for containers)"
 				<< "\n4) Keep\n";
 
 			std::cin >> actionChoice;
@@ -2072,15 +2206,9 @@ public:
 				}
 			}
 			case 3:
-				if (player.gold >= shopItem.itemCost && shopItem.canRefill) {
+				if (shopItem.canRefill) {
 
-					player.gold -= 3;
-					std::cout << "\nYou refil your " << shopItem.itemName;
-					shopItem.itemsHeld.push_back(shopItem.itemBecomes);
-					shopItem.updateItem(shopItem.itemBecomes);
-					shopItem.itemsHeld.erase(shopItem.itemsHeld.begin() + (manageChoice - 1));
-					std::cout << ", it's now a " << shopItem.itemName << ".";
-
+					refillOptionMenu(manageChoice);
 				}
 				else {
 
@@ -2098,6 +2226,76 @@ public:
 		}
 
 
+	}
+
+	void refillOptionMenu(int manageChoice) {
+		bool containerFilled = false;
+		int refillChoice = 0;
+		while (!containerFilled) {
+			std::cout << "\nWhat would you like to fill your container with?\n"
+				<<"\n1)Soup ( 3g )"
+				<<"\n2)Strength Potion ( 8g )"
+				<<"\n3)Regeneration Potion ( 4g )\n";
+
+			std::cin >> refillChoice;
+
+			if (handleInputFailure("") || input > 3 || input < 1) {
+				std::cout << "\nInput a number 1 - 3";
+				continue;
+			}
+			switch (refillChoice) {
+
+			case 1:
+				if (player.gold >= 3) {
+					player.gold -= 3;
+					std::cout << "\nYou refil your " << shopItem.itemName;
+					shopItem.itemsHeld.push_back(19);
+					shopItem.updateItem(19);
+					shopItem.itemsHeld.erase(shopItem.itemsHeld.begin() + (manageChoice - 1));
+					std::cout << ", it's now a " << shopItem.itemName << ".";
+					containerFilled = true;
+				}
+				else {
+					std::cout << "\nInsufficient gold to refill!";
+					containerFilled = true;
+				}
+				
+				break;
+
+			case 2:
+				if (player.gold >= 8) {
+					player.gold -= 8;
+					std::cout << "\nYou refil your " << shopItem.itemName;
+					shopItem.itemsHeld.push_back(20);
+					shopItem.updateItem(20);
+					shopItem.itemsHeld.erase(shopItem.itemsHeld.begin() + (manageChoice - 1));
+					std::cout << ", it's now a " << shopItem.itemName << ".";
+					containerFilled = true;
+				}
+				else {
+					std::cout << "\nInsufficient gold to refill!";
+					containerFilled = true;
+				}
+				break;
+			case 3:
+				if (player.gold >= 4) {
+					player.gold -= 4;
+					std::cout << "\nYou refil your " << shopItem.itemName;
+					shopItem.itemsHeld.push_back(21);
+					shopItem.updateItem(21);
+					shopItem.itemsHeld.erase(shopItem.itemsHeld.begin() + (manageChoice - 1));
+					std::cout << ", it's now a " << shopItem.itemName << ".";
+					containerFilled = true;
+				}
+				else {
+					std::cout << "\nInsufficient gold to refill!";
+					containerFilled = true;
+				}
+				break;
+			}
+
+		}
+		
 	}
 
 	void spellShopMenu() {
@@ -2601,6 +2799,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 		} 
 		if (player.getStrength() >= 8) {
 			spell.grantPlayerSpell(10);
+			item.grantPlayerItem(20);
 			bonusHealth += 1;
 			bonusCritChance += 1;
 			bonusMeleeDamage += 1;
