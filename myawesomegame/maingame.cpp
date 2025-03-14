@@ -73,18 +73,6 @@ struct EnemyStats {
 
 };
 
-struct statusEffect {
-
-	std::string name;
-	std::string actionName;
-	char statusId = '0';
-	char type = 'h';
-	unsigned short strengthValue = 0;
-	unsigned short duration = 0;
-	std::string buffTarget;
-
-
-};
 
 const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 
@@ -240,6 +228,7 @@ void mainMenu() {
 
 		case 1:
 			mainGameStarted = true;
+			
 			break;
 		case 2:
 			
@@ -257,6 +246,19 @@ void mainMenu() {
 
 };
 
+
+struct statusEffect {
+
+	std::string name;
+	std::string actionName;
+	char statusId = '0';
+	char type = 'h';
+	unsigned short strengthValue = 0;
+	unsigned short duration = 0;
+	std::string buffTarget;
+
+
+};
 
 class character {
 
@@ -317,7 +319,7 @@ public:
 		std::cout << "Player Name: " << name << std::endl
 			<< "Level: " << level << "\n"
 			<< "Experience: " << experience << "/" << experienceToNext
-			<< "Speciality: " << playerSpeciality
+			<< "\nSpeciality: " << playerSpeciality
 
 			<< "\nGold: " << gold
 		 << "\nMax Health: " << playerMaxHealth << std::endl
@@ -478,25 +480,261 @@ public:
 	friend class statuseffects;
 };
 
+class enemy {
+
+private:
+
+	int enemyMaxHealth = 0;
+	int enemyHealth = 0;
+	int defense = 0;
+	int attack = 0;
+	int minLevel = 0;
+	int tempDefense = 0;
+	unsigned short goldDropped = 0;
+	unsigned short experienceWorth = 0;
+	std::string name = " ";
+	char aiType = '0';
+
+public:
+
+	friend class combatHandler;
+
+	friend class items;
+
+	friend class character;
+
+	enemy(){
+		
+		std::cout << "enemy encountered" << std::endl;
+		
+	}
+
+	void enemySet(int enemyMaxHp, int enemyHp, int edefense, int eattack, int gold, int exp, std:: string ename, character& player) {
+		enemyRoll = rand() % 6;
+		if (enemyRoll == 3) {
+			auto it = EnemyStatsMap.begin();
+			std::advance(it, rand() % EnemyStatsMap.size());
+			const EnemyStats& stats = it->second;
+			minLevel = it->second.minLevel;
+			//if (player.level < minLevel){
+				name = it->first;
+				enemyMaxHealth = it->second.maxHealth;
+				enemyHealth = it->second.maxHealth;
+				defense = it->second.defense;
+				attack = it->second.attack;
+				goldDropped = it->second.goldDropped;
+				experienceWorth = it->second.exp;
+				aiType = it->second.aiType;
+				tempDefense = defense;
+			//}
+		
+		}
+		else {
+			enemyMaxHealth = enemyMaxHp;
+			enemyHealth = enemyHp;
+			defense = edefense;
+			attack = eattack;
+			goldDropped = gold;
+			experienceWorth = exp;
+			name = ename;
+			tempDefense = defense;
+
+		}
+
+
+	
+
+	};
+
+	void takeDamage(int damage){
+		setColor(3);
+		std::cout << std::endl << "Enemy took " << damage << " damage!" << std::endl;
+		enemyHealth -= damage;
+		setColor(7);
+	}
+
+	float enemyCalculateMeleeDamage(character& player) {
+
+		float baseDamage = (attack * (1 + static_cast<float>(intensity) / 8)) - player.defense/3;
+		float variance = 0.9f + (rand() % 21) / 100.0;
+		int minimumDamage = (1 + attack / 6);
+		int finalDamage = static_cast<int>(baseDamage * variance);
+		if (finalDamage<minimumDamage) finalDamage = minimumDamage;
+		return finalDamage;
+	}; 
+
+	void displayStatsTest() {
+
+		std::cout << "Enemy Name: " << name << std::endl;
+		std::cout << "Max Health: " << enemyMaxHealth << std::endl;
+		std::cout << "Current Health: " << enemyHealth << std::endl;
+		std::cout << "Defense: " << defense << std::endl;
+		std::cout << "Attack: " << attack << std::endl;
+		std::cout << "Gold Dropped: " << goldDropped << std::endl;
+		std::cout << "Experience Worth: " << experienceWorth << std::endl << std:: endl;
+
+	}
+
+	int enemyGetDefense() {
+		return defense;
+	}
+
+	void basicEnemyAi(character& player){
+		if (battling)  {
+			diceRoll = rand() % 4;
+			setColor(13);
+			switch (diceRoll) {
+				
+			case 0: {
+				
+				player.takeDamage(enemyCalculateMeleeDamage(player));
+				turnsElapsed++;
+				break;
+			}
+			case 1:
+				//defend
+				std::cout << "\nEnemy defends, you'll do less melee damage\n";
+				tempDefense = defense;
+				defense = defense * 1.33;
+				turnsElapsed++;
+				break;
+			case 2:
+				std::cout << "\nThe enemy  turns up the heat! Intensity + 3\n";
+				intensity += 3;
+				turnsElapsed++;
+				//do nothing
+				break;
+			case 3:
+				std::cout << "\nEnemy does nothing.\n";
+				//also do nothing
+				turnsElapsed++;
+				break;
+			}
+			setColor(7);
+		}
+
+	}
+
+};
+
+class statuseffects {
+private:
+
+	std::vector<statusEffect> playerStatuses; 
+	std::vector<statusEffect> enemyStatuses;
+
+	std::string defaultName = "Bleed";
+	std::string defaultActionName = "Bleeding"; // "You took 3 damage due to : Bleeding"
+	char defaultStatusId = '0';
+	char defaultType = 'h'; //h for healing over time, d for damage over time, b for buff, f for debuff
+	unsigned short defaultStrengthValue = 0;
+	unsigned short defaultDuration = 0;
+	std::string defaultBuffTarget = "dexterity";
+	
+
+
+public:
+	friend character;
+	character& player;
+	enemy& opponent;
+
+
+	statuseffects(character& p, enemy& e) : player(p), opponent(e) {}
+
+	void grantStatusEffect(character& player,enemy& opponent,bool onPlayer, char statusId){
+		statusEffect newEffect;
+		switch (statusId) {
+		case '0':
+			newEffect.name = "Strength Boost";
+			newEffect.actionName = "Feeling Strong";
+			newEffect.statusId = '0';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 3;
+			newEffect.duration = 3;
+			newEffect.buffTarget = "strength";
+			break;
+		case '1':
+			newEffect.name = "Minor Regeneration";
+			newEffect.actionName = "Minor Regeneration";
+			newEffect.statusId = '1';
+			newEffect.type = 'h';
+			newEffect.strengthValue = 3;
+			newEffect.duration = 2;
+			newEffect.buffTarget = "none";
+			break;
+		default:
+			break;
+		}
+		if (onPlayer) {
+			playerStatuses.push_back(newEffect);
+		}
+		else {
+			enemyStatuses.push_back(newEffect);
+		}
+
+	}
+	
+
+	void tickPlayerStatus() {
+		if (!playerStatuses.empty()) {
+			for (auto it = playerStatuses.begin(); it != playerStatuses.end(); ) {
+				if (it->duration == 0) {
+					std::cout << "\n" << it->name << " ran out";
+					it = playerStatuses.erase(it); 
+				}
+				else {
+					if (it->type == 'h') {
+						player.playerHealth += it->strengthValue;
+						std::cout << "You gained " << it->strengthValue << " HP due to " << it->actionName << std::endl;
+						it->duration--;
+					}
+					if (it->type == 'b') {
+						
+					
+						it->duration--;
+					}
+					++it;  
+				}
+			}
+
+		}
+		
+	}
+
+	void tickEnemyStatus() {
+		if (!enemyStatuses.empty()) {
+			for (int i = 0; i < enemyStatuses.size(); i++) {
+
+
+			}
+		}
+	}
+
+};
+
 class spells {
 
 public:
 	char id = '0';
 	int baseDamage = 0;
-	float attributePowerModifier = 0; 
+	float attributePowerModifier = 0;
 	short spellSlotCost = 0;
 	short spellPrice = 0;
 	int baseHealing = 0;
 	int healthCost = 0;
-	std::string statusEffect = ""; 
-	float statusApplyChance = 0.05;
+	char statusEffectId = '0';
+	float statusApplyChance = 5.0f;
+	bool statusOnPlayer = false;
 	char scalingAttribute = '0'; // scalingAttribute of 0 is wisdom, 1 is faith, 2 is both, 3 is neither, 4 is strength, 5 is dex?
 	std::string spellName = "default";
 	short intensityChange = 0;
 	std::vector<char> spellsKnown;
-	
 
-	spells() {
+	
+	enemy& opponent;
+	statuseffects& status;
+
+	spells(statuseffects& st, enemy& e) : opponent(e), status(st) {
 
 		id = 0;
 		baseDamage = 3;
@@ -505,17 +743,17 @@ public:
 		scalingAttribute = '0';
 
 	}
-	
+
 	struct spellEffect {
 		int damage = 0;
 		int healing = 0;
 		int selfDamage = 0;
 		unsigned short intensityChanger = 0;
 	};
-	
+
 	char displaySpellMenu(character& player) {
 
-		
+
 		if (spellsKnown.empty()) {
 
 			std::cout << "You don't know any spells. \n";
@@ -533,8 +771,8 @@ public:
 					<< " | Cost: " << std::setw(2) << spellSlotCost
 					<< " | Damage: " << std::setw(3) << effect.damage
 					<< " | Healing: " << std::setw(3) << effect.healing
-					<< " | Self Damage: " << std::setw(3) << effect.selfDamage 
-				<< " | Intensity Change: " << std::setw(3) << intensityChange << std::endl;
+					<< " | Self Damage: " << std::setw(3) << effect.selfDamage
+					<< " | Intensity Change: " << std::setw(3) << intensityChange << std::endl;
 				i++;
 
 			}
@@ -573,6 +811,9 @@ public:
 	void updateSpell(char SpellId) {
 		healthCost = 0;
 		intensityChange = 0;
+		statusEffectId = '100';
+		statusApplyChance = 0;
+		statusOnPlayer = false;
 		switch (SpellId) {
 
 
@@ -785,12 +1026,25 @@ public:
 			baseDamage = 3;
 			healthCost = 5;
 			attributePowerModifier = 1.1f;
-			spellName = "Blood Dart"; 
+			spellName = "Blood Dart";
 			scalingAttribute = '5'; //dex scaling
 			spellSlotCost = 0;
 			spellPrice = 15;
 			intensityChange = 0;
 			break;
+		case 21:
+			baseHealing = 6;
+			baseDamage = 0;
+			spellName = "Weak Regeneration";
+			attributePowerModifier = 1.05f;
+			scalingAttribute = '1'; // faith
+			statusEffectId = '1';
+			statusApplyChance = 100.0f;
+			statusOnPlayer = true;
+			spellSlotCost = 1;
+			spellPrice = 20;
+			break;
+
 
 
 		default:
@@ -836,14 +1090,14 @@ public:
 			modifier = (((player.dexterity + player.luck) * attributePowerModifier));
 			break;
 		case '7':
-			modifier = (((player.endurance + player.faith/2) * attributePowerModifier));
+			modifier = (((player.endurance + player.faith / 2) * attributePowerModifier));
 			break;
 
 		case '8':
 			modifier = (player.luck * attributePowerModifier);
 			rolledNumber = 10 + rand() % 290;
 			modifier *= rolledNumber / 100.0f;
-			
+
 			break;
 
 		default:
@@ -874,18 +1128,31 @@ public:
 
 		}
 
+		if (!display && statusApplyChance != 0) {
+
+			if (statusOnPlayer == true) {
+
+				status.grantStatusEffect(player,opponent, true, statusEffectId);
+			}
+			else {
+				rolledNumber = (rand() % 100) + 1;
+				if (statusApplyChance > rolledNumber);
+				status.grantStatusEffect(player, opponent, false, statusEffectId);
+
+			}
+		}
 
 		spellEffect effect;
-		
+
 		int finalDamage = 0;
 		if (id == 14) {
-			effect.selfDamage = player.playerMaxHealth/10;
+			effect.selfDamage = player.playerMaxHealth / 10;
 		}
 		else {
 			effect.selfDamage = healthCost;
 
 		}
-		
+
 		if (baseHealing > 0) {
 			int finalHealing = baseHealing + powerModifier(player);
 			effect.healing = finalHealing;
@@ -900,10 +1167,10 @@ public:
 			}
 			if (display) return 0; // Return base value for display if HP too low
 		}*/
-	
-			
-	
-					
+
+
+
+
 		if (baseDamage > 0) {
 			switch (scalingAttribute) {
 
@@ -911,14 +1178,14 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.1));
 				effect.damage = finalDamage + bonusSpellDamage;
-				
+
 				break;
 			case '1':
 
 				finalDamage = baseDamage * powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.172));
 				effect.damage = finalDamage;
-				
+
 				break;
 
 			case '2':
@@ -926,7 +1193,7 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.1));
 				effect.damage = finalDamage;
-			
+
 				break;
 
 			case '3':
@@ -934,7 +1201,7 @@ public:
 				finalDamage = baseDamage;
 				finalDamage *= static_cast<float>((1.2 + intensity * 0.11));
 				effect.damage = finalDamage;
-				
+
 				break;
 
 			case '4':
@@ -942,7 +1209,7 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1.1 + intensity * 0.08));
 				effect.damage = finalDamage;
-				
+
 				break;
 
 			case '5':
@@ -950,7 +1217,7 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1.0 + intensity * 0.12));
 				effect.damage = finalDamage;
-				
+
 				break;
 
 			case '8':
@@ -966,240 +1233,21 @@ public:
 				finalDamage = baseDamage + powerModifier(player);
 				finalDamage *= static_cast<float>((1 + intensity * 0.1));
 				effect.damage = finalDamage;
-				
+
 				break;
 
 
 			}
 
-	}
-					
-			
-
-			return effect;
-		
-		
-		
-	}
-
-};
-
-class enemy {
-
-private:
-
-	int enemyMaxHealth = 0;
-	int enemyHealth = 0;
-	int defense = 0;
-	int attack = 0;
-	int minLevel = 0;
-	int tempDefense = 0;
-	unsigned short goldDropped = 0;
-	unsigned short experienceWorth = 0;
-	std::string name = " ";
-	char aiType = '0';
-
-public:
-
-	friend class combatHandler;
-
-	friend class items;
-
-	friend class character;
-
-	enemy(){
-		
-		std::cout << "enemy encountered" << std::endl;
-		
-	}
-
-	void enemySet(int enemyMaxHp, int enemyHp, int edefense, int eattack, int gold, int exp, std:: string ename, character& player) {
-		enemyRoll = rand() % 6;
-		if (enemyRoll == 3) {
-			auto it = EnemyStatsMap.begin();
-			std::advance(it, rand() % EnemyStatsMap.size());
-			const EnemyStats& stats = it->second;
-			minLevel = it->second.minLevel;
-			//if (player.level < minLevel){
-				name = it->first;
-				enemyMaxHealth = it->second.maxHealth;
-				enemyHealth = it->second.maxHealth;
-				defense = it->second.defense;
-				attack = it->second.attack;
-				goldDropped = it->second.goldDropped;
-				experienceWorth = it->second.exp;
-				aiType = it->second.aiType;
-				tempDefense = defense;
-			//}
-		
-		}
-		else {
-			enemyMaxHealth = enemyMaxHp;
-			enemyHealth = enemyHp;
-			defense = edefense;
-			attack = eattack;
-			goldDropped = gold;
-			experienceWorth = exp;
-			name = ename;
-			tempDefense = defense;
-
 		}
 
 
-	
 
-	};
+		return effect;
 
-	void takeDamage(int damage){
-		setColor(3);
-		std::cout << std::endl << "Enemy took " << damage << " damage!" << std::endl;
-		enemyHealth -= damage;
-		setColor(7);
-	}
 
-	float enemyCalculateMeleeDamage(character& player) {
-
-		float baseDamage = (attack * (1 + static_cast<float>(intensity) / 8)) - player.defense/3;
-		float variance = 0.9f + (rand() % 21) / 100.0;
-		int minimumDamage = (1 + attack / 6);
-		int finalDamage = static_cast<int>(baseDamage * variance);
-		if (finalDamage<minimumDamage) finalDamage = minimumDamage;
-		return finalDamage;
-	}; 
-
-	void displayStatsTest() {
-
-		std::cout << "Enemy Name: " << name << std::endl;
-		std::cout << "Max Health: " << enemyMaxHealth << std::endl;
-		std::cout << "Current Health: " << enemyHealth << std::endl;
-		std::cout << "Defense: " << defense << std::endl;
-		std::cout << "Attack: " << attack << std::endl;
-		std::cout << "Gold Dropped: " << goldDropped << std::endl;
-		std::cout << "Experience Worth: " << experienceWorth << std::endl << std:: endl;
 
 	}
-
-	int enemyGetDefense() {
-		return defense;
-	}
-
-	void basicEnemyAi(character& player){
-		if (battling)  {
-			diceRoll = rand() % 4;
-			setColor(13);
-			switch (diceRoll) {
-				
-			case 0: {
-				
-				player.takeDamage(enemyCalculateMeleeDamage(player));
-				turnsElapsed++;
-				break;
-			}
-			case 1:
-				//defend
-				std::cout << "\nEnemy defends, you'll do less melee damage\n";
-				tempDefense = defense;
-				defense = defense * 1.33;
-				turnsElapsed++;
-				break;
-			case 2:
-				std::cout << "\nThe enemy  turns up the heat! Intensity + 3\n";
-				intensity += 3;
-				turnsElapsed++;
-				//do nothing
-				break;
-			case 3:
-				std::cout << "\nEnemy does nothing.\n";
-				//also do nothing
-				turnsElapsed++;
-				break;
-			}
-			setColor(7);
-		}
-
-	}
-
-};
-
-class statuseffects {
-private:
-
-	std::vector<statusEffect> playerStatuses; 
-	std::vector<statusEffect> enemyStatuses;
-
-	std::string defaultName = "Bleed";
-	std::string defaultActionName = "Bleeding"; // "You took 3 damage due to : Bleeding"
-	char defaultStatusId = '0';
-	char defaultType = 'h'; //h for healing over time, d for damage over time, b for buff, f for debuff
-	unsigned short defaultStrengthValue = 0;
-	unsigned short defaultDuration = 0;
-	std::string defaultBuffTarget = "dexterity";
-	
-
-
-public:
-	friend character;
-	character& player;
-	enemy& opponent;
-
-
-	statuseffects(character& p, enemy& e) : player(p), opponent(e) {}
-
-	void grantStatusEffect(character& player,enemy& opponent,bool onPlayer, char statusId){
-		statusEffect newEffect;
-		switch (statusId) {
-		case '0':
-			newEffect.name = "Strength Boost";
-			newEffect.actionName = "Feeling Strong";
-			newEffect.statusId = '0';
-			newEffect.type = 'b';
-			newEffect.strengthValue = 3;
-			newEffect.duration = 3;
-			newEffect.buffTarget = "strength";
-			break;
-
-		default:
-			break;
-		}
-		if (onPlayer) {
-			playerStatuses.push_back(newEffect);
-		}
-		else {
-			enemyStatuses.push_back(newEffect);
-		}
-		//dealing with vectors
-	//if on player true
-		//statuspushback.player
-	//if on player flase
-		//statuspushback.enemy
-
-	}
-	/*
-	void tickStatus(character& player, enemy& opponent) {
-		if (turnsElapsed % 2 == 0) { 
-			for (auto it = playerStatuses.begin(); it != playerStatuses.end();) {
-				if (it->type == 'b' && it->buffTarget == "strength") {
-					std::cout << "\n" << it->actionName << ": +" << it->strengthValue << " strength!";
-					player.strength += it->strengthValue; 
-				}
-				it->duration--;
-				if (it->duration <= 0) {
-					if (it->type == 'b' && it->buffTarget == "strength") player.strength -= it->strengthValue; // Revert
-					it = playerStatuses.erase(it);
-				}
-				else ++it;
-			}
-		}
-			//for(statuses in player.statusEffects )
-				//do status effects on player
-				//duration - 1
-		// if turnsElapsed % 2 = 1
-			//for(statuses in opponent.statusEffects )
-				//do status effects on enemy
-				//duration - 1
-	}
-	*/
-	
 
 };
 
@@ -1748,7 +1796,7 @@ private:
 	bool spellsGenerated = false;
 	bool doneShopping = false;
 	bool shopUpgraded = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16, 17, 18, 19, 20 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16, 17, 18, 19, 20, 21 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -2051,8 +2099,6 @@ public:
 
 
 	}
-
-
 
 	void spellShopMenu() {
 		std::cout << "-----Buy Spells-----\n";
@@ -2517,7 +2563,7 @@ public:
 			levelUpHandler();
 
 			player.defense = player.temporaryDefense; //reset defense if you defended
-			
+			status.tickPlayerStatus();
 
 			if(battling)		{
 				displayIntensity();
@@ -2647,9 +2693,15 @@ void startingBonus(character& player, items& item, spells& spell) {
 			spell.grantPlayerSpell(5);
 
 		}
+		if ((player.getEndurance() + player.getFaith()) > 10 && player.getFaith() >= 6 && player.getEndurance() > 4) {
+
+			spell.grantPlayerSpell(21);
+
+			std::cout << "\nYou have a deepened understanding of wellbeing.";
+		}
 	}
 
-	void pickName(character& player) {
+void pickName(character& player) {
 
 		std::string newName = "";
 		while (newName == "") {
@@ -2661,7 +2713,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 		
 
 	}
-	void pickSpeciality() {
+void pickSpeciality(spells& spell) {
 		bool specialityPicked = false;
 		int specialityChosen = '0';
 		while (!specialityPicked) {
@@ -2729,21 +2781,23 @@ int main() {
 
 
 
-	spells spelltest;
-	pickSpeciality();
-	test1.pickAttributes();
-	//clear();
-
+	
+	
 
 	enemy test;
 	statuseffects teststatus(test1, test);
-
+	spells spelltest(teststatus,test);
 	items testitem(teststatus);
+
+	pickSpeciality(spelltest);
+	test1.pickAttributes();
+	//clear();
+
 	startingBonus(test1, testitem, spelltest);
 	test.enemySet(20, 20, 1, 4, 10, 20, "beebie", test1);
 	shop shoptest(spelltest, testitem, test1, test);
 	combatHandler combat1(test1, test, spelltest, testitem, shoptest, teststatus);
-
+	
 	while (test1.playerHealth > 0) {
 		battling = true;
 		intensity = bonusIntensity;
