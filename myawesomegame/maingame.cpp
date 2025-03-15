@@ -12,6 +12,7 @@
 #include <iomanip>
 
 unsigned short intensity = 0;
+
 int input = 0;
 bool mainGameStarted = false;
 bool battling = true;
@@ -87,11 +88,12 @@ const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 
 	{"Snow Golem", {40, 12, 6, 10, 30, '1', 2}},
 	{"Little Golem", {30, 10, 6, 8, 30, '1', 1}},
-	{"Soul Sucker",{25, 8, 10, 16, 60, '2', 4}},
-	{"Living Armor", {80, 14, 6, 30, 100,'1', 5}},
-	{"Fear Monger", {90,12,12,40, 150,'3', 6}},
-	{ "Fat Dragon", {180,25,25,100, 250,'4', 9}},
-	{ "Penultimate Knight", {220,34,22,120, 350,'3', 10}}
+	{"Soul Sucker",{55, 8, 10, 16, 60, '2', 4}},
+	{"Living Armor", {80, 14, 6, 20, 100,'1', 5}},	
+	{"Fear Monger", {90,12,12,25, 150,'3', 6}},
+	{ "The Grand Alfred", {100,10,10,30, 150,'4', 7}},
+	{ "Fat Dragon", {180,25,25,70, 250,'4', 9}},
+	{ "Penultimate Knight", {220,34,22,90, 350,'3', 10}}
 };
 
 float calcDamageVariance() {
@@ -284,11 +286,12 @@ private:
 	unsigned short faith = 1;
 public:
 	//things the player cannot change, and or can be changed by external things
+	short nameColor = 7;
 	int attributePoints = 15;
 	int level = 1;
 	int gold = 0;
 	int experience = 0;
-	int experienceToNext = 40;
+	int experienceToNext = 65;
 	int playerHealth = 0;
 	int playerMaxHealth = 0;
 	unsigned int defense = 0;
@@ -303,6 +306,13 @@ public:
 		name = yourname;
 	}
 
+	int getLevel() {
+		return level;
+	}
+	void grantExp(int xpGranted) {
+		experience += xpGranted;
+		std::cout << "\nYou gained " << xpGranted << " XP!\n";
+	}
 	int getEndurance() {
 		return endurance;
 	}
@@ -326,7 +336,10 @@ public:
 		gold += amount;
 	}
 	void displayStats() {
-		std::cout << "\nPlayer: " << name << " | Lvl: " << level << " | XP: " << experience << "/" << experienceToNext
+		setColor(nameColor);
+		std::cout << "\nPlayer: " << name;
+		setColor(7);
+		std::cout << " | Lvl: " << level << " | XP: " << experience << "/" << experienceToNext
 			<< " | Spec: " << playerSpeciality << "\n"
 			<< "Gold: " << gold << " | HP: " << playerHealth << "/" << playerMaxHealth
 			<< " | Def: " << defense << " | MDef: " << magicDefense << "\n"
@@ -454,8 +467,8 @@ public:
 
 	};
 	int calculateMeleeDamage(int enemyDefense) {
-		float baseDamage = static_cast<int>((strength *(1 + intensity * 0.1))-static_cast<float>(enemyDefense/1.4f));		
-		int minimumDamage = 1 + static_cast<int>(strength / 4.0f + faith/10.0f + wisdom/10.0f + luck/10.0f + dexterity/10.0f);
+		float baseDamage = static_cast<int>((strength *(0.92 + intensity * 0.08))-static_cast<float>(enemyDefense/0.92f));		
+		int minimumDamage = 1 + static_cast<int>(strength / 4.5f + faith/10.0f + wisdom/10.0f + luck/10.0f + dexterity/10.0f);
 		int damage = baseDamage * calcDamageVariance();
 		if (damage < minimumDamage) damage = minimumDamage;
 		
@@ -508,26 +521,8 @@ public:
 	}
 
 	void enemySet(int enemyMaxHp, int enemyHp, int edefense, int eattack, int gold, int exp, std:: string ename, character& player) {
-		enemyRoll = rand() % 6;
-		if (enemyRoll == 3) {
-			auto it = EnemyStatsMap.begin();
-			std::advance(it, rand() % EnemyStatsMap.size());
-			const EnemyStats& stats = it->second;
-			minLevel = it->second.minLevel;
-			//if (player.level < minLevel){
-				name = it->first;
-				enemyMaxHealth = it->second.maxHealth;
-				enemyHealth = it->second.maxHealth;
-				defense = it->second.defense;
-				attack = it->second.attack;
-				goldDropped = it->second.goldDropped;
-				experienceWorth = it->second.exp;
-				aiType = it->second.aiType;
-				tempDefense = defense;
-			//}
 		
-		}
-		else {
+		
 			enemyMaxHealth = enemyMaxHp;
 			enemyHealth = enemyHp;
 			defense = edefense;
@@ -537,7 +532,7 @@ public:
 			name = ename;
 			tempDefense = defense;
 
-		}
+		
 
 
 	
@@ -587,7 +582,7 @@ public:
 				//defend
 				std::cout << "\nEnemy defends, you'll do less melee damage\n";
 				tempDefense = defense;
-				defense = defense * 1.33;
+				defense = defense * 1.70;
 				turnsElapsed++;
 				break;
 			case 2:
@@ -700,6 +695,15 @@ public:
 			newEffect.duration = 6;
 			newEffect.buffTarget = '-1';
 			break;
+		case 7:
+			newEffect.name = "Defensive Stance";
+			newEffect.actionName = "Defending";
+			newEffect.statusId = '7';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 5;
+			newEffect.duration = 3;
+			newEffect.buffTarget = '6';
+			break;
 		default:
 			break;
 		}
@@ -735,6 +739,9 @@ public:
 		case '5':
 			player.faith += strength;
 			break;
+		case '6':
+			player.defense += strength;
+			break;
 		default:
 			break;
 
@@ -764,6 +771,9 @@ public:
 		case '5':
 			player.faith -= strength;
 			break;
+		case '6':
+			player.defense -= strength;
+			break;
 		default:
 			break;
 
@@ -779,7 +789,7 @@ public:
 					if (it->buffApplied) {
 						removeBuffedStat(it->strengthValue, it->buffTarget);
 					}
-					std::cout << "\n" << it->name << " ran out";
+					std::cout << "\n" << it->name << " ran out\n";
 					it = playerStatuses.erase(it); 
 				}
 				else {
@@ -1423,6 +1433,10 @@ public:
 		// Return a default value if the attribute doesn't exist
 		static int defaultAttr = 0;
 		return defaultAttr;
+	}
+
+	int getInventorySize() const {
+		return itemsHeld.size();
 	}
 
 	void grantPlayerItem(char itemId) {
@@ -2457,6 +2471,13 @@ private:
 	};
 
 public:
+
+	character& player;
+
+	zoneHandler(character& p) : player(p) {
+
+	}
+
 	float getDifficultyAmplifier() {
 		return zoneDifficultyAmplifier;
 	}
@@ -2491,21 +2512,27 @@ public:
 		return zoneName;
 	}
 
-	void zoneChecker(int totalRounds) {
+	void zoneChecker(int roundsCounter) {
 
-		if (totalRounds % 10 == 0 && totalRounds > 0) {
-
+		if (roundsCounter % 10 == 0 && roundsCounter > 0) {
+		
+			totalRounds = 0;
 			newZone();
-
+			setColor(14);
+			std::cout << "\nZone cleared!";
+			setColor(7);
+			int bonusXP = 40 + player.getLevel() * 5;
+			player.grantExp(bonusXP);
 		}
 
 	}
 
 	void zoneInfo() {
-		std::cout << "Zone: " << zoneName
+		std::cout << "\nZone: " << zoneName
 			<< " | Diff: " << std::fixed << std::setprecision(2) << zoneDifficultyAmplifier
 			<< " | Gold: " << zoneGoldAmplifier
-			<< " | XP: " << zoneExperienceAmplifier << "\n";
+			<< " | XP: " << zoneExperienceAmplifier 
+			<< " | Zone Progress: " << totalRounds << "/ 10" << "\n\n";
 
 
 	}
@@ -2567,7 +2594,7 @@ public:
 			setColor(7);
 			player.experience -= player.experienceToNext;
 			
-			player.experienceToNext *= 1.33;
+			player.experienceToNext *= 1.40;
 			player.attributePoints += 3;
 
 		}
@@ -2621,13 +2648,22 @@ public:
 	bool fleeLogic() {
 		int fleebonus = 0;
 		float intensityMultiplier = 1;
+
 		if (intensity <= 10) intensityMultiplier = 0.6f;
 		if (intensity < 2) fleebonus = 50;
 		else intensityMultiplier = 1;
-		double result = 6.2 * intensity * intensityMultiplier; // result is double
+
+		double result = 6.2 * intensity * intensityMultiplier; 
+// result is double
 		int finalIntensity = static_cast<int>(result); // explicit cast to int
 		int fleeValue = rand() % 301 + player.luck * 3 + player.dexterity * 2 + fleebonus;
 		int fleeNumberNeeded = static_cast<int>(100 + (sqrt(player.luck * (player.dexterity + 2)) * 4) + finalIntensity);
+
+		if (totalRounds == 6) {
+			fleeNumberNeeded += 170;
+			std::cout << "\nThe enemy's aura is overwhelming, escaping might prove challenging.. (Need "
+				<< fleeNumberNeeded << ", Got " << fleeValue << ")\n";
+		}
 		if (fleeValue > fleeNumberNeeded){
 			std::cout << "You fled successfully.\n";
 			battling = false;
@@ -2656,30 +2692,58 @@ public:
 		int randomGold = 0;
 		std::string randomName = "Alfred";
 
-		randomHealth = rand() % (28 + player.level * 9) + 6;
-		randomAttack = rand() % (2 + player.level * 3) + 1;
+
+		if (totalRounds == 6) {
+			
+			std::vector<std::pair<std::string, EnemyStats>> validEnemies;
+			for (const auto& enemy : EnemyStatsMap) {
+				if (player.level >= enemy.second.minLevel) {
+					validEnemies.push_back(enemy);
+				}
+			}
+			if (!validEnemies.empty()) {
+				auto it = validEnemies[rand() % validEnemies.size()];
+				randomHealth = it.second.maxHealth * zones.getDifficultyAmplifier();
+				randomAttack = it.second.attack * zones.getDifficultyAmplifier();
+				randomDefense = it.second.defense * zones.getDifficultyAmplifier();
+				randomXP = it.second.exp * zones.getExpAmplifier();
+				randomGold = it.second.goldDropped * zones.getGoldAmplifier();
+				randomName = it.first;
+
+				opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack,
+					randomGold, randomXP, randomName, player);
+				return;
+			}
+		}
+
+		randomHealth = rand() % (24 + player.level * 7) + 5;
+		randomAttack = rand() % (4 + player.level * 2) + 1;
 		randomDefense = rand() % (5 + player.level * 3) + 3;
 		randomXP = (randomHealth + randomAttack + randomDefense)/1.5;
-		randomGold = (rand() % 8 + player.luck / 2) + player.level * 2 + randomXP/20 ;
+		randomXP *= zones.getExpAmplifier();
+		randomGold = (rand() % 8 + player.luck / 3) + player.level * 3 + randomXP/16 ;
+		randomGold *= zones.getGoldAmplifier();
 		randomName = "alfred " + std::to_string(rand() % 200);
 
 		randomHealth *= zones.getDifficultyAmplifier();
 		randomAttack *= zones.getDifficultyAmplifier();
 		randomDefense *= zones.getDifficultyAmplifier();
 
-		randomXP *= zones.getExpAmplifier();
-		randomGold *= zones.getGoldAmplifier();
+		
+	
 
 		opponent.enemySet(randomHealth, randomHealth, randomDefense, randomAttack, randomGold, randomXP, randomName,player);
 		
 	};
 
 	void initiateCombat() {
+		levelUpHandler();
+		enemyRandomizer();
 		setColor(7);
 		std::cout << "\n+----------------- Battle in " << zones.getZoneName() << " -----------------+\n";
 		setColor(15);
 		std::cout << "| Battle " << roundsPassed + 1 << "/" << roundsNeeded << " ";
-		if (enemyRoll == 3) std::cout << "| Special: " << opponent.name;
+		if (totalRounds == 6) std::cout << "| Special Miniboss: " << opponent.name;
 		std::cout << " |\n";
 		setColor(7);
 		std::cout << "+-----------------------------------------------------+\n";
@@ -2691,15 +2755,15 @@ public:
 
 				
 				
-					std::cout << "\nEnemy: " << drawHealthBar(opponent.enemyHealth, opponent.enemyMaxHealth)
+					std::cout << "\n" << opponent.name << ": " << drawHealthBar(opponent.enemyHealth, opponent.enemyMaxHealth)
 					<< " " << opponent.enemyHealth << "/" << opponent.enemyMaxHealth
 					<< " | Atk: " << opponent.enemyCalculateMeleeDamage(player) << "\n";
 				std::cout << "You: " << drawHealthBar(player.playerHealth, player.playerMaxHealth)
 					<< " " << player.playerHealth << "/" << player.playerMaxHealth << "\n"
 				<< std::endl << "1) Attack" << " | Damage: " << player.calculateMeleeDamage(opponent.defense)
 				<< std::endl << "2) Defend"
-				<< std::endl << "3) Spells"
-				<< std::endl << "4) Items"
+				<< std::endl << "3) Spells (" << player.spellsAvailable << "/" << player.maximumSpellsAvailable << ")"
+				<< std::endl << "4) Items (" << item.getInventorySize() << ")\n"
 				<< std::endl << "5) Check"
 				<< std::endl << "6) Flee" << std::endl;
 
@@ -2744,7 +2808,8 @@ public:
 			case 2:
 				std::cout << " \nYou brace for impact.. \n";
 				player.temporaryDefense = player.defense;
-				player.defense += player.defense / 3;
+				player.defense += player.defense / 2;
+				status.grantStatusEffect(player, opponent, true, 7);
 				intensity++;
 				turnsElapsed++;
 				break;
@@ -2855,7 +2920,7 @@ public:
 			
 			}
 
-			enemyRandomizer();
+			
 			
 		}
 			
@@ -2974,7 +3039,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 		if (player.getWisdom() >= 5) {
 
 			std::cout << "\nUsing your intellect, you realize you can shoot sparks from your hands.\n";
-
+			item.grantPlayerItem(7);
 			spell.grantPlayerSpell(5);
 
 		}
@@ -3000,6 +3065,12 @@ void pickName(character& player) {
 	player.setName(newName);
 
 	}
+void pickNameColor(character& player) {
+	std::cout << "\nPick your name color:\n1) Red\n2) Blue\n3) Green\n";
+	int choice;
+	std::cin >> choice;
+	player.nameColor = (choice >= 1 && choice <= 3) ? choice + 3 : 7;  // 4=Red, 5=Blue, 6=Green, 7=Default
+}
 void pickSpeciality(spells& spell) {
 		bool specialityPicked = false;
 		int specialityChosen = '0';
@@ -3065,7 +3136,7 @@ int main() {
 
 	character test1(0, 0, 0, 0, 0, 0);
 	pickName(test1);
-
+	pickNameColor(test1);
 
 
 	
@@ -3075,7 +3146,7 @@ int main() {
 	statuseffects teststatus(test1, test);
 	spells spelltest(teststatus,test);
 	items testitem(teststatus);
-	zoneHandler zone;
+	zoneHandler zone(test1);
 
 	pickSpeciality(spelltest);
 	test1.pickAttributes();
