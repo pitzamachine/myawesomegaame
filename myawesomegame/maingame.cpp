@@ -87,14 +87,14 @@ struct EnemyStats {
 
 const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 
-	{"Snow Golem", {40, 12, 6, 10, 30, '1', 2}},
-	{"Little Golem", {30, 10, 6, 8, 30, '1', 1}},
-	{"Soul Sucker",{55, 8, 10, 16, 60, '2', 4}},
-	{"Living Armor", {80, 14, 6, 20, 100,'1', 5}},	
-	{"Fear Monger", {90,12,12,25, 150,'3', 6}},
-	{ "The Grand Alfred", {100,10,10,30, 150,'4', 7}},
-	{ "Fat Dragon", {180,25,25,70, 250,'4', 9}},
-	{ "Penultimate Knight", {220,34,22,90, 350,'3', 10}}
+	{"Snow Golem", {50, 12, 6, 10, 30, '1', 2}},
+	{"Little Golem", {40, 10, 6, 8, 30, '1', 1}},
+	{"Soul Sucker",{75, 8, 10, 16, 60, '2', 4}},
+	{"Living Armor", {90, 14, 6, 20, 100,'1', 5}},	
+	{"Fear Monger", {100,12,12,25, 150,'3', 6}},
+	{ "The Grand Alfred", {120,10,10,30, 150,'4', 7}},
+	{ "Fat Dragon", {195,25,25,70, 250,'4', 9}},
+	{ "Penultimate Knight", {230,34,22,90, 350,'3', 10}}
 };
 
 float calcDamageVariance() {
@@ -612,6 +612,7 @@ public:
 
 	void grantStatusEffect(character& player, enemy& opponent, bool onPlayer, char statusId) {
 		statusEffect newEffect;
+		newEffect.buffApplied = false;
 		switch (statusId) {
 
 		case 0:
@@ -797,6 +798,7 @@ public:
 					}
 					if (it->type == 'b') {
 						if (!it->buffApplied) {
+							std::cout << "\nApplying buff: " << it->name << " (Target: " << it->buffTarget << ", Strength: " << it->strengthValue << ")\n";
 							changeBuffedStat(it->strengthValue, it->buffTarget);
 							it->buffApplied = true;
 						}
@@ -1230,7 +1232,7 @@ public:
 			spellName = "Weak Regeneration";
 			attributePowerModifier = 1.05f;
 			scalingAttribute = '1'; // faith
-			statusEffectId = '6';
+			statusEffectId = 6;
 			statusApplyChance = 100.0f;
 			statusOnPlayer = true;
 			spellSlotCost = 1;
@@ -2008,7 +2010,7 @@ public:
 			updateItem(itemBecomes);
 			std::cout << "\nYou get a " << itemName << "!";
 		}
-		float chanceFreeAction = player.luck / 2 + bonusFreeItemTurnChance;
+		float chanceFreeAction = (player.luck / 2) + (player.dexterity/3) + bonusFreeItemTurnChance;
 		if (chanceFreeAction >= 20)chanceFreeAction = 20;
 		rolledNumber = rand() % 100;
 		if (chanceFreeAction > rolledNumber) {
@@ -3234,6 +3236,7 @@ public:
 				itemUsed = item.displayItemMenu(player, opponent);
 				if (itemUsed != 'f') {
 					turnTaken = true;
+					
 				}
 				break;
 			}
@@ -3318,7 +3321,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 
 		}
 		 
-		if ((player.getDexterity() + player.getFaith()) >= 11 && player.getFaith() >= 4 && player.getDexterity() >= 3) {
+		if ((player.getDexterity() + player.getFaith()) >= 9 && player.getFaith() >= 4 && player.getDexterity() >= 3) {
 			item.grantPlayerItem(8);
 			item.grantPlayerItem(8);
 			spell.grantPlayerSpell(20);
@@ -3327,7 +3330,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 			std::cout << "\nYour religion instills in you an odd obsession with blood.\n";
 
 		} 
-		if (player.getStrength() >= 8) {
+		if (player.getStrength() >= 7) {
 			spell.grantPlayerSpell(10);
 			item.grantPlayerItem(20);
 			bonusHealth += 1;
@@ -3363,20 +3366,21 @@ void startingBonus(character& player, items& item, spells& spell) {
 			player.grantGold(15);
 
 		}
-		if (player.getEndurance() > 11) {
+		if (player.getEndurance() >= 10) {
 			//spell.grantPlayerSpell(14);
 			std::cout << "\nYou are a hulking mass, capable of nudging off all but the strongest of attacks...\n";
 			bonusHealth += 6;
 			bonusCritChance += 1;
 		}
 
-		if ((player.getFaith() + player.getWisdom()) >= 10) {
+		if ((player.getFaith() + player.getWisdom()) >= 9) {
 			
 			spell.grantPlayerSpell(8);
+			item.grantPlayerItem(22);
 			std::cout << "\nYour arcane knowledge grants you insight on a spell!";
 
 		}
-		if ((player.getLuck() + player.getDexterity()) >= 12 && player.getDexterity() > 3 && player.getLuck() > 3) {
+		if ((player.getLuck() + player.getDexterity()) >= 11 && player.getDexterity() > 3 && player.getLuck() > 3) {
 
 			item.grantPlayerItem(1);
 			item.grantPlayerItem(8);
@@ -3405,7 +3409,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 			spell.grantPlayerSpell(4);
 
 		}
-		if (player.getLuck() >= 8) {
+		if (player.getLuck() >= 7) {
 			item.grantPlayerItem(18);
 			item.grantPlayerItem(18);
 			item.grantPlayerItem(18);
@@ -3422,7 +3426,7 @@ void startingBonus(character& player, items& item, spells& spell) {
 			spell.grantPlayerSpell(5);
 
 		}
-		if ((player.getEndurance() + player.getFaith()) > 10 && player.getFaith() >= 6 && player.getEndurance() > 4) {
+		if ((player.getEndurance() + player.getFaith()) >= 10 && player.getFaith() >= 4 && player.getEndurance() >= 4) {
 
 			spell.grantPlayerSpell(21);
 
