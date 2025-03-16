@@ -647,7 +647,7 @@ public:
 			newEffect.statusId = '3';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 3;
-			newEffect.duration = 4;
+			newEffect.duration = 5;
 			newEffect.buffTarget = '3';
 			break;
 		case 4:
@@ -1808,6 +1808,19 @@ public:
 			itemCost = 10;
 
 			break;
+		case 22:
+			itemName = "Wise Bomb";
+			itemDamage = 8;
+			itemQuantity = 1;
+			scalingType = "attribute";
+			itemType = "damage";
+			statusEffectIdGiven = 3;
+			attributeScalingFactor = 0.13f;
+			attributeScale = "wisdom";
+			intensityChange = 0;
+			itemCost = 10;
+			break;
+
 		default:
 
 			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
@@ -1869,6 +1882,13 @@ public:
 		bool itemHasBeenUsed = false;
 		updateItem(itemUsed);
 	
+		if (statusEffectIdGiven != -1) {
+
+			status.grantStatusEffect(player, opponent, true, statusEffectIdGiven);
+
+
+		}
+
 
 		if (intensityChange != 0) {
 			int newIntensity = intensity + intensityChange;
@@ -1896,15 +1916,6 @@ public:
 				player.playerHealth += totalHealing; // you should replace this with a player.heal function
 				std::cout << "\nYou gain " << totalHealing << " Health Points!\n";
 			}
-			
-			
-			if (statusEffectIdGiven != -1) {
-			
-				status.grantStatusEffect(player, opponent, true, statusEffectIdGiven);
-				
-
-			}
-
 			if (spellSlotsRestored > 0) {
 				player.spellsAvailable += spellSlotsRestored;
 				if (player.spellsAvailable > player.maximumSpellsAvailable) {
@@ -1920,6 +1931,8 @@ public:
 			
 
 		}
+		
+
 		if (itemType == "buff") {
 
 			itemsHeld.erase(itemsHeld.begin() + (input - 1));
@@ -1989,6 +2002,7 @@ public:
 
 
 		}
+
 		if (itemTransforms && itemHasBeenUsed) {
 			itemsHeld.push_back(itemBecomes);
 			updateItem(itemBecomes);
@@ -2002,6 +2016,10 @@ public:
 			std::cout << "\nYou got lucky, and can act again!";
 			setColor(7);
 		}
+
+
+		
+
 		else {
 			turnsElapsed++;
 		}
@@ -2022,7 +2040,7 @@ private:
 
 		"Beebie", "Scilop", "Favar", "Sompy", "Willilo",
 		"Carbab", "Odiar", "Lerest", "Imingo", "Merida",
-		"Enpe", "Utap", "Dojer", "Saticar", "Forall"
+		"Enpe", "Utap", "Dojer", "Saticar", "Forall", "Rajaco"
 
 	};
 	std::vector<std::string> secondWords = {
@@ -2031,10 +2049,18 @@ private:
 		"Mountain", "Ridge"
 
 	};
-
-public:
+	struct ZoneOption {
+		std::string name;
+		std::string type;
+		float difficulty;
+		float gold;
+		float exp;
+	};
 
 	
+public:
+
+	std::vector<ZoneOption> choices;
 	
 
 
@@ -2059,7 +2085,7 @@ public:
 			std::cout << "\nThis is the start of your adventure!\n";
 
 		}
-		
+		std::cout << "\n+--------------------------+\n";
 	}
 	
 	character& player;
@@ -2090,11 +2116,83 @@ public:
 
 		zoneName = firstWords[firstIndex] + " " + secondWords[secondIndex];
 		setColor(10);
+		std::cout << "\n------- Your journey begins in " << zoneName << "! -------\n";
+		setColor(7);
+		std::cout << "D:" << std::fixed << std::setprecision(2) << zoneDifficultyAmplifier
+			<< " G:" << zoneGoldAmplifier << " XP:" << zoneExperienceAmplifier << "\n";
+		std::cout << std::defaultfloat;
+
+	}
+
+	void generateZone() {
+		choices.clear();
+		
+		for (int i = 0; i < 3; i++) {
+			ZoneOption zonechoice;
+			std::string newName;
+			bool unique;
+			do {
+				int firstIndex = rand() % firstWords.size();
+				int secondIndex = rand() % secondWords.size();
+				newName = firstWords[firstIndex] + " " + secondWords[secondIndex];
+				unique = true;
+				for (const auto& choice : choices) {
+					if (choice.name == newName) {
+						unique = false;
+						break;
+					}
+				}
+			} while (!unique && choices.size() < firstWords.size() * secondWords.size());
+
+			zonechoice.difficulty = 0.75f + (static_cast<float>(rand()) / RAND_MAX) * 1.25f;
+			zonechoice.gold = 0.85f + (static_cast<float>(rand()) / RAND_MAX) * 0.7f;
+			zonechoice.exp = 0.85f + (static_cast<float>(rand()) / RAND_MAX) * 0.7f;
+			zonechoice.name = newName;
+			choices.push_back(zonechoice);
+		}
+		
+	}
+
+	void chooseZone() {
+		bool zoneChosen = false;
+		unsigned short zoneChoice;
+		while (!zoneChosen) {
+			int index = 1;
+			std::cout << "\nChoose 1 of the 3 zones.\n";
+			for (auto i : choices) {
+				std::cout << index << ") " << i.name
+					<< " | Diff: " << std::fixed << std::setprecision(2) << i.difficulty
+					<< " | Gold: " << i.gold
+					<< " | XP: " << i.exp << "\n";
+				index++;
+			}
+			std::cout << std::defaultfloat;
+
+
+			std::cin >> zoneChoice;
+
+			if (handleInputFailure("") || zoneChoice > 3 || zoneChoice < 1) {
+				std::cout << "\nPick a zone 1-3";
+				continue;
+			}
+			ZoneOption selected = choices[zoneChoice - 1];
+			zoneName = selected.name;
+			zoneDifficultyAmplifier = selected.difficulty;
+			zoneGoldAmplifier = selected.gold;
+			zoneExperienceAmplifier = selected.exp;
+			zoneChosen = true;
+			std::cout << "\nTraveling to: " << zoneName;
+
+		}
+		setColor(10);
 		std::cout << "\n------- Welcome to " << zoneName << "! -------\n";
 		setColor(7);
 		std::cout << "D:" << std::fixed << std::setprecision(2) << zoneDifficultyAmplifier
 			<< " G:" << zoneGoldAmplifier << " XP:" << zoneExperienceAmplifier << "\n";
 		std::cout << std::defaultfloat;
+	
+		
+
 
 	}
 
@@ -2108,12 +2206,13 @@ public:
 		
 			totalRounds = 0;
 			addClearedZone(zoneName);
-			newZone();
 			setColor(14);
 			std::cout << "\nZone cleared!";
 			setColor(7);
 			int bonusXP = 40 + player.getLevel() * 5;
 			player.grantExp(bonusXP);
+			generateZone();
+			chooseZone();
 		}
 
 	}
@@ -2295,7 +2394,7 @@ public:
 
 		for (int i = 1; i <= objectsAvailable; i++) {
 
-			int randomItemId = rand() % 22; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
+			int randomItemId = rand() % 23; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
 			//bool isPair = (rand() % 100 < 20);
 			if (!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
 
@@ -2968,6 +3067,7 @@ public:
 		randomHealth = rand() % (24 + player.level * 7) + 5;
 		randomAttack = rand() % (4 + player.level * 2) + 1;
 		randomDefense = rand() % (5 + player.level * 3) + 3;
+		randomHealth *= zones.getDifficultyAmplifier();
 		randomXP = (randomHealth + randomAttack + randomDefense)/1.5;
 		randomXP *= zones.getExpAmplifier();
 		randomGold = (rand() % 8 + player.luck / 3) + player.level * 3 + randomXP/16 ;
@@ -2975,7 +3075,7 @@ public:
 		randomName = "alfred " + std::to_string(rand() % 200);
 		randomAI = '1' + rand() % 2;
 
-		randomHealth *= zones.getDifficultyAmplifier();
+		
 		randomAttack *= zones.getDifficultyAmplifier();
 		randomDefense *= zones.getDifficultyAmplifier();
 
@@ -3417,6 +3517,7 @@ int main() {
 	
 
 	character test1(0, 0, 0, 0, 0, 0);
+	zoneHandler zone(test1);
 	pickName(test1);
 	pickNameColor(test1);
 
@@ -3429,8 +3530,7 @@ int main() {
 	spells spelltest(teststatus,test);
 	items testitem(teststatus);
 	
-	zoneHandler zone(test1);
-
+	
 	pickSpeciality(test1);
 	test1.pickAttributes();
 	//clear();
