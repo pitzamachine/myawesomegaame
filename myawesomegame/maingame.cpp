@@ -777,8 +777,9 @@ public:
 		if (!playerStatuses.empty()) {
 			for (auto it = playerStatuses.begin(); it != playerStatuses.end(); ) {
 				if (it->duration == 0) {
-
+					if(it->buffApplied)
 					removeBuffedStat(it->strengthValue, it->buffTarget);
+
 					std::cout << "\n" << it->name << " ran out\n";
 					it = playerStatuses.erase(it);
 
@@ -2009,6 +2010,126 @@ public:
 
 };
 
+class zoneHandler {
+
+private:
+	std::string zoneName = "Beebie springs";
+	float zoneDifficultyAmplifier = 1.0f;
+	float zoneGoldAmplifier = 1.0f;
+	float zoneExperienceAmplifier = 1.0f;
+	std::vector<std::string> areasVisited;
+	std::vector<std::string> firstWords = {
+
+		"Beebie", "Scilop", "Favar", "Sompy", "Willilo",
+		"Carbab", "Odiar", "Lerest", "Imingo", "Merida",
+		"Enpe", "Utap", "Dojer", "Saticar", "Forall"
+
+	};
+	std::vector<std::string> secondWords = {
+
+		"Falls", "Forest", "Plains", "Prairie", "Grove",
+		"Mountain", "Ridge"
+
+	};
+
+public:
+
+	
+	
+
+
+	void addClearedZone(std::string clearedZone) {
+
+		areasVisited.push_back(clearedZone);
+
+	}
+
+	void checkMap() {
+
+		std::cout << "\n+---Map---+\n" << "\nYou are in: "
+		<< zoneName
+		<< "\n+-Previously visited zones-+";
+		if (!areasVisited.empty()) {
+			for (auto i : areasVisited) {
+
+				std::cout << "\n" << i;
+			}
+		}
+		else {
+			std::cout << "\nThis is the start of your adventure!\n";
+
+		}
+		
+	}
+	
+	character& player;
+
+	zoneHandler(character& p ) : player(p) {
+
+	}
+
+	float getDifficultyAmplifier() {
+		return zoneDifficultyAmplifier;
+	}
+	float getGoldAmplifier() {
+		return zoneGoldAmplifier;
+	}
+	float getExpAmplifier() {
+		return zoneExperienceAmplifier;
+	}
+
+
+	void newZone() {
+
+		int firstIndex = rand() % firstWords.size();
+		int secondIndex = rand() % secondWords.size();
+
+		zoneDifficultyAmplifier = 0.75f + (static_cast<float>(rand()) / RAND_MAX) * 0.65f;
+		zoneGoldAmplifier = 0.85f + (static_cast<float>(rand()) / RAND_MAX) * 0.7f;
+		zoneExperienceAmplifier = 0.85f + (static_cast<float>(rand()) / RAND_MAX) * 0.7f;
+
+		zoneName = firstWords[firstIndex] + " " + secondWords[secondIndex];
+		setColor(10);
+		std::cout << "\n------- Welcome to " << zoneName << "! -------\n";
+		setColor(7);
+		std::cout << "D:" << std::fixed << std::setprecision(2) << zoneDifficultyAmplifier
+			<< " G:" << zoneGoldAmplifier << " XP:" << zoneExperienceAmplifier << "\n";
+		std::cout << std::defaultfloat;
+
+	}
+
+	std::string getZoneName() {
+		return zoneName;
+	}
+
+	void zoneChecker(int roundsCounter) {
+
+		if (roundsCounter % 10 == 0 && roundsCounter > 0) {
+		
+			totalRounds = 0;
+			addClearedZone(zoneName);
+			newZone();
+			setColor(14);
+			std::cout << "\nZone cleared!";
+			setColor(7);
+			int bonusXP = 40 + player.getLevel() * 5;
+			player.grantExp(bonusXP);
+		}
+
+	}
+
+	void zoneInfo() {
+		std::cout << "\nZone: " << zoneName
+			<< " | Diff: " << std::fixed << std::setprecision(2) << zoneDifficultyAmplifier
+			<< " | Gold: " << zoneGoldAmplifier
+			<< " | XP: " << zoneExperienceAmplifier 
+			<< " | Zone Progress: " << totalRounds << "/ 10" << "\n\n";
+
+
+	}
+
+};
+
 class shop {
 
 private:
@@ -2029,11 +2150,13 @@ public:
 	items& shopItem;
 	character& player;
 	enemy& opponent;
+	zoneHandler& zones;
 	friend items;
 	friend spells;
 	friend character;
+	friend zoneHandler;
 	std::vector<char> itemsInShop;
-	shop(spells& s, items& i, character& c, enemy& e) : shopSpell(s), shopItem(i), player(c), opponent(e){
+	shop(spells& s, items& i, character& c, enemy& e, zoneHandler& z) : shopSpell(s), shopItem(i), player(c), opponent(e), zones(z) {
 
 
 	}
@@ -2053,12 +2176,12 @@ public:
 			"3) One spell slot: " << spellSlotPrice << " Gold\n" <<
 			"4) Full spell slots: " << fullSpellSlotPrice << " Gold\n" <<
 			"5) Temporary spell slots: " << tempSlotPrice << " Gold\n" <<
-			"6) +1 Permanent Health: " << hpIncreasePrice  << "\n"
-			<< "Health: " << player.playerHealth << "/" << player.playerMaxHealth << "\n" 
-			<< "Spell Slots: " <<player.spellsAvailable << "/" << player.maximumSpellsAvailable << "\n"
-			<< "Temporary Slots: " <<player.temporarySpellSlots << "\n" 
+			"6) +1 Permanent Health: " << hpIncreasePrice << "\n"
+			<< "Health: " << player.playerHealth << "/" << player.playerMaxHealth << "\n"
+			<< "Spell Slots: " << player.spellsAvailable << "/" << player.maximumSpellsAvailable << "\n"
+			<< "Temporary Slots: " << player.temporarySpellSlots << "\n"
 			<< "\nChoose a number 1-5\n";
-			
+
 		std::cin >> healingChoice;
 
 		handleInputFailure("\nInvalid input, healing cancelled.");
@@ -2067,7 +2190,7 @@ public:
 		}
 		else {
 
-			switch(healingChoice){
+			switch (healingChoice) {
 
 			case 1:
 				if (player.playerHealth < player.playerMaxHealth && player.gold > 0) {
@@ -2085,7 +2208,7 @@ public:
 				if (player.playerHealth < player.playerMaxHealth && player.gold >= healingPrice) {
 
 					player.playerHealth = player.playerMaxHealth;
-					
+
 					player.gold -= healingPrice;
 
 				}
@@ -2117,9 +2240,9 @@ public:
 					std::cout << "\nChanneling unsuccessful. (Full spell slots, or not enough gold)";
 				}
 				break;
-				
+
 			case 5: {
-			
+
 				if (player.gold >= tempSlotPrice) {
 
 					player.gold -= tempSlotPrice;
@@ -2162,25 +2285,25 @@ public:
 	}
 
 	void itemShopMenu(items& shopItem) {
-		
+
 		std::cout << "-----Buy Items-----\n";
-		
-		for (int i = 1; i <= objectsAvailable; i++) { 
-				
+
+		for (int i = 1; i <= objectsAvailable; i++) {
+
 			int randomItemId = rand() % 22; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
 			//bool isPair = (rand() % 100 < 20);
-			if(!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
-		
-			}
+			if (!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
+
+		}
 		itemsGenerated = true;
-			
+
 		for (int i = 0; i < itemsInShop.size(); i++) {
 			int itemId = itemsInShop[i];
 			shopItem.updateItem(itemId); //reads and updates the data
 
-			std::cout << i + 1<< ") " << shopItem.itemQuantity << " " << shopItem.itemName << " | Cost: " << shopItem.itemCost << " gold.\n";
+			std::cout << i + 1 << ") " << shopItem.itemQuantity << " " << shopItem.itemName << " | Cost: " << shopItem.itemCost << " gold.\n";
 
-		
+
 		}
 		if (!itemsInShop.empty()) {
 			std::cout << "What would you like to buy?\n";
@@ -2196,8 +2319,8 @@ public:
 
 				if (player.gold >= shopItem.itemCost) {
 					player.gold -= shopItem.itemCost;
-					for(int i = 0;i < shopItem.itemQuantity; i++) shopItem.itemsHeld.push_back(selectedItemId);
-					
+					for (int i = 0; i < shopItem.itemQuantity; i++) shopItem.itemsHeld.push_back(selectedItemId);
+
 					itemsInShop.erase(itemsInShop.begin() + (purchaseChoice - 1));
 					std::cout << "\nItem(s) Purchased";
 
@@ -2234,12 +2357,12 @@ public:
 	}
 
 	void itemManage() {
-		
+
 		int manageChoice;
 		int actionChoice;
 		bool itemManaged = false;
 		maxRecycleCount = 2 + player.getLuck() / 5 + bonusRecycle;
-		
+
 		shopItem.displayItemMenu(player, opponent);
 		if (shopItem.itemsHeld.empty()) {
 			std::cout << "\nNo items to manage!\n";
@@ -2249,18 +2372,18 @@ public:
 		std::cout << "\nWhich item do you wish to manage? (1-" << shopItem.itemsHeld.size() << ")\n";
 		std::cin >> manageChoice;
 
-		
+
 		if (handleInputFailure("\nInvalid input, managing cancelled.") ||
 			manageChoice < 1 || manageChoice > shopItem.itemsHeld.size()) {
 			std::cout << "\nChoose an item within your inventory (1-" << shopItem.itemsHeld.size() << ").\n";
 			return;
 		}
 
-		
+
 		char selectedItem = shopItem.itemsHeld[manageChoice - 1];
 		shopItem.updateItem(selectedItem);
 
-		
+
 		while (!itemManaged) {
 			std::cout << "\n" << shopItem.itemName << "\nWhat do you wish to do with this item?"
 				<< "\nRecycles used: " << recycleCount << "/" << maxRecycleCount << "\n"
@@ -2282,7 +2405,7 @@ public:
 			}
 
 			switch (actionChoice) {
-			case 1: 
+			case 1:
 				shopItem.itemsHeld.erase(shopItem.itemsHeld.begin() + (manageChoice - 1));
 				std::cout << "\n" << shopItem.itemName << " tossed.\n";
 				itemManaged = true;
@@ -2310,7 +2433,7 @@ public:
 				else
 				{
 					std::cout << "\nYou've already recycled twice this visit!";
-						itemManaged = true;
+					itemManaged = true;
 					break;
 				}
 			}
@@ -2327,7 +2450,7 @@ public:
 				itemManaged = true;
 				break;
 
-			case 4: 
+			case 4:
 				std::cout << "\n" << shopItem.itemName << " kept.\n";
 				itemManaged = true;
 				break;
@@ -2342,9 +2465,9 @@ public:
 		int refillChoice;
 		while (!containerFilled) {
 			std::cout << "\nWhat would you like to fill your container with?\n"
-				<<"\n1)Soup ( 3g )"
-				<<"\n2)Strength Potion ( 8g )"
-				<<"\n3)Regeneration Potion ( 4g )\n";
+				<< "\n1)Soup ( 3g )"
+				<< "\n2)Strength Potion ( 8g )"
+				<< "\n3)Regeneration Potion ( 4g )\n";
 
 			std::cin >> refillChoice;
 
@@ -2368,7 +2491,7 @@ public:
 					std::cout << "\nInsufficient gold to refill!";
 					containerFilled = true;
 				}
-				
+
 				break;
 
 			case 2:
@@ -2404,12 +2527,12 @@ public:
 			}
 
 		}
-		
+
 	}
 
 	void spellShopMenu() {
 		std::cout << "-----Buy Spells-----\n";
-		
+
 		int availableCount = 0;
 		for (char spell : availableSpells) {
 			if (std::find(shopSpell.spellsKnown.begin(), shopSpell.spellsKnown.end(), spell) == shopSpell.spellsKnown.end() &&
@@ -2418,7 +2541,7 @@ public:
 			}
 		}
 
-		if(!spellsGenerated) while (spellsInShop.size() < std::min(3, availableCount)) {
+		if (!spellsGenerated) while (spellsInShop.size() < std::min(3, availableCount)) {
 
 			int randomSpell = rand() % availableSpells.size(); // gets a random spell from the spells available in the game
 			char spellId = availableSpells[randomSpell];
@@ -2427,12 +2550,12 @@ public:
 				std::find(spellsInShop.begin(), spellsInShop.end(), spellId) == spellsInShop.end()) {
 				spellsInShop.push_back(spellId);
 			}
-			
+
 
 
 		}
 		spellsGenerated = true;
-		
+
 		for (int i = 0; i < spellsInShop.size(); i++) {
 
 			shopSpell.updateSpell(spellsInShop[i]);
@@ -2477,166 +2600,90 @@ public:
 		doneShopping = false;
 		player.temporarySpellSlots = 0; //reset temp spell slots, they only last 2 battles.
 		setColor(4);
-		std::cout <<  "--Welcome to the shop!--\n";
+		std::cout << "--Welcome to the shop!--\n";
 		setColor(7);
 		while (!doneShopping && player.playerHealth > 0) {
-			int healPrice = ((player.playerMaxHealth - player.playerHealth) / 3 + 4 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level*0.8);
-			std::cout
-				<< "\nYou have " << player.gold << " Gold."
-				<< "\nHP: " << drawHealthBar(player.playerHealth,player.playerMaxHealth)
-				<< "\n1) Items"
-				<< "\n2) Spells"
-				<< "\n3) Healer" 
-				<< "\n4) Check"
-				<< "\n5) Refresh (8 Gold)"
-				<< "\n6) Manage Items"
-				<< "\n7) Leave shop\n";
+			int healPrice = ((player.playerMaxHealth - player.playerHealth) / 3 + 4 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level * 0.8);
+			if (totalRounds == 6) {
+				std::cout << "\n--Difficult foe ahead!--\n";
+			}
 
-			
-			
+			std::cout << "\nYou have " << player.gold << " Gold | HP: " << drawHealthBar(player.playerHealth, player.playerMaxHealth) << "\n"
+				<< "----- Shop -----\n"
+				<< "1) Shop Goods   - Buy items, spells, or healing\n"
+				<< "2) Tools        - Manage items, refresh stock, check stats\n"
+				<< "3) Travel       - View map or leave shop\n";
+
+
 
 			std::cin >> shopChoice;
 
-			if (std::cin.fail()) { 
-				std::cin.clear();
-				std::cin.ignore(10000, '\n');
-				std::cout << "Invalid input! Choose a number 1-7.\n";
-				continue; // i didn't know this but it restarts the loop, I think theres another one which doesn't do that?
+			if (handleInputFailure("\nInvalid input! Input a number 1-3\n")) {
+				continue;
+
 			}
 
 			switch (shopChoice) {
 
 			case 1:
-				itemShopMenu(shopItem);
+				std::cout << "\n----- Shop Goods -----\n"
+					<< "1) Items\n"
+					<< "2) Spells\n"
+					<< "3) Healer\n";
+					
+				std::cin >> shopChoice;
+				if (handleInputFailure("Choose 1-3.\n")) continue;
+				switch (shopChoice) {
+				case 1: itemShopMenu(shopItem); break;
+				case 2: spellShopMenu(); break;
+				case 3: healChoiceMenu(); break;
+				}
 				break;
 			case 2:
-				spellShopMenu();
-				break;
-			case 3: // handles player healing. All or nothing. I think i'll give you the ability to pick between healing spell slots and hp
+				std::cout << "\n----- Tools -----\n"
+					<< "1) Manage Items\n"
+					<< "2) Refresh (8 Gold)\n"
+					<< "3) Check Stats\n";
+                              
+                    std::cin >> shopChoice;
+                    if (handleInputFailure("Choose 1-3.\n")) continue;
+					switch (shopChoice) {
+					case 1: itemManage(); break;
+					case 2:
+						if (player.gold >= 8) {
+							player.gold -= 8;
+							shopRefresh();
+							std::cout << "\nShop refreshed.\n";
+						}
+						else {
+							std::cout << "\nYou need 8 gold to refresh the shop.\n";
+						}
+						break;
+					case 3: player.displayStats(); break;
+					}
+					break;
+			case 3: 
 			{
-				healChoiceMenu();
-				break;
+				std::cout << "\n----- Travel -----\n"
+					<< "1) View Map\n"
+					<< "2) Leave Shop\n";
+				std::cin >> shopChoice;
+				if (handleInputFailure("Choose 1-2.\n")) continue;
+				switch (shopChoice) {
+				case 1: zones.checkMap(); break;
+				case 2: leaveShop(); return; // Exit shop entirely
+				}
 			}
+			break;
 
-				
-			case 4:
-				player.displayStats();
-				break;
-			case 5:
-				if (player.gold >= 8) {
-					player.gold -= 8;
-					shopRefresh();
-					std::cout << "\nShop refreshed.";
-				}
-				else {
-					std::cout << "\nYou need 8 gold to refresh the shop";
-				}
-
-				break;
-			case 6:
-				itemManage();
-				break;
-			case 7:
-				leaveShop();
-				break;
 			default:
-				std::cout << "Please enter a number 1-5";
+				std::cout << "Please enter a number 1-3";
 				break;
 
 			};
 
-			
+
 		}
-	}
-
-};
-
-class zoneHandler {
-
-private:
-	std::string zoneName = "Beebie springs";
-	float zoneDifficultyAmplifier = 1.0f;
-	float zoneGoldAmplifier = 1.0f;
-	float zoneExperienceAmplifier = 1.0f;
-	std::vector<std::string> firstWords = {
-
-		"Beebie", "Scilop", "Favar", "Sompy", "Willilo",
-		"Carbab", "Odiar", "Lerest", "Imingo", "Merida",
-		"Enpe", "Utap", "Dojer", "Saticar", "Forall"
-
-	};
-	std::vector<std::string> secondWords = {
-
-		"Falls", "Forest", "Plains", "Prairie", "Grove",
-		"Mountain", "Ridge"
-
-	};
-
-public:
-
-	character& player;
-
-	zoneHandler(character& p) : player(p) {
-
-	}
-
-	float getDifficultyAmplifier() {
-		return zoneDifficultyAmplifier;
-	}
-	float getGoldAmplifier() {
-		return zoneGoldAmplifier;
-	}
-	float getExpAmplifier() {
-		return zoneExperienceAmplifier;
-	}
-
-
-	void newZone() {
-
-		int firstIndex = rand() % firstWords.size();
-		int secondIndex = rand() % secondWords.size();
-
-		zoneDifficultyAmplifier = 0.75f + (static_cast<float>(rand()) / RAND_MAX) * 0.65f;
-		zoneGoldAmplifier = 0.85f + (static_cast<float>(rand()) / RAND_MAX) * 0.7f;
-		zoneExperienceAmplifier = 0.85f + (static_cast<float>(rand()) / RAND_MAX) * 0.7f;
-
-		zoneName = firstWords[firstIndex] + " " + secondWords[secondIndex];
-		setColor(10);
-		std::cout << "\n------- Welcome to " << zoneName << "! -------\n";
-		setColor(7);
-		std::cout << "D:" << std::fixed << std::setprecision(2) << zoneDifficultyAmplifier
-			<< " G:" << zoneGoldAmplifier << " XP:" << zoneExperienceAmplifier << "\n";
-		std::cout << std::defaultfloat;
-
-	}
-
-	std::string getZoneName() {
-		return zoneName;
-	}
-
-	void zoneChecker(int roundsCounter) {
-
-		if (roundsCounter % 10 == 0 && roundsCounter > 0) {
-		
-			totalRounds = 0;
-			newZone();
-			setColor(14);
-			std::cout << "\nZone cleared!";
-			setColor(7);
-			int bonusXP = 40 + player.getLevel() * 5;
-			player.grantExp(bonusXP);
-		}
-
-	}
-
-	void zoneInfo() {
-		std::cout << "\nZone: " << zoneName
-			<< " | Diff: " << std::fixed << std::setprecision(2) << zoneDifficultyAmplifier
-			<< " | Gold: " << zoneGoldAmplifier
-			<< " | XP: " << zoneExperienceAmplifier 
-			<< " | Zone Progress: " << totalRounds << "/ 10" << "\n\n";
-
-
 	}
 
 };
@@ -3062,7 +3109,6 @@ public:
 	};
 
 
-
 void startingBonus(character& player, items& item, spells& spell) {
 
 		if (player.getDexterity() >= 5) {
@@ -3284,6 +3330,7 @@ int main() {
 	statuseffects teststatus(test1, test);
 	spells spelltest(teststatus,test);
 	items testitem(teststatus);
+	
 	zoneHandler zone(test1);
 
 	pickSpeciality(test1);
@@ -3292,7 +3339,7 @@ int main() {
 
 	startingBonus(test1, testitem, spelltest);
 	test.enemySet(20, 20, 1, 4, 10, 20, '1', "beebie", test1);
-	shop shoptest(spelltest, testitem, test1, test);
+	shop shoptest(spelltest, testitem, test1, test, zone);
 	combatHandler combat1(test1, test, spelltest, testitem, shoptest, teststatus,zone);
 	zone.newZone();
 	while (test1.playerHealth > 0) {
