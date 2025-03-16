@@ -2133,9 +2133,14 @@ public:
 class shop {
 
 private:
-	int objectsAvailable = 4;
-	int recycleCount = 0;
-	int maxRecycleCount = 2;
+	unsigned short refreshCost = 10;
+	unsigned short shopLevel = 1;
+	unsigned short shopUpgradePrice = 0;
+	unsigned short objectsAvailable = 3;
+	unsigned short slotPriceReduction = 0;
+	int spellsAvailable = 2;
+	unsigned short recycleCount = 0;
+	unsigned short maxRecycleCount = 2;
 	std::string shopType = "items";
 	bool itemsGenerated = false;
 	bool spellsGenerated = false;
@@ -2165,9 +2170,9 @@ public:
 		int healingChoice;
 		int hpIncreasePrice = 12 + bonusHealth * 2;
 		int healingPrice = ((player.playerMaxHealth - player.playerHealth) / 3);
-		int spellSlotPrice = 4 * 1 * (player.level * 0.8);
-		if (spellSlotPrice > 20) spellSlotPrice = 20;
-		short tempSlotPrice = (10 * player.temporarySpellSlots) + 15;
+		int spellSlotPrice = 4 * 1 * (player.level * 0.8) - slotPriceReduction;
+		if (spellSlotPrice > 20 - slotPriceReduction) spellSlotPrice = 20 - slotPriceReduction;
+		short tempSlotPrice = ((10 * player.temporarySpellSlots) + 15) - slotPriceReduction;
 		int fullSpellSlotPrice = spellSlotPrice * (player.maximumSpellsAvailable - player.spellsAvailable);
 
 		std::cout << "-----Healing-----\n" <<
@@ -2356,6 +2361,97 @@ public:
 		spellsInShop.clear();
 	}
 
+	void shopUpgradeMenu() {
+
+		shopUpgradePrice = shopLevel * 25;
+		int upgradeChoice = 0;
+
+		std::cout << "\n---Shop Upgrades---\n"
+			<< "\nShop Level: " << shopLevel <<
+			"\nUpgrade Price: " << shopUpgradePrice << " Gold." <<
+			"\nBenefits of next level: ";
+
+		switch (shopLevel) {
+
+		case 1:
+			std::cout <<
+				"\nRefresh cost: -1" <<
+				"\nSpell Slot cost: -1";
+			break;
+
+		case 2:
+			std::cout <<
+				"\nRefresh cost: -1" <<
+				"\nItems Available: +1";
+			break;
+		case 3:
+			std::cout <<
+				"\nRefresh cost: -1" <<
+				"\nSpell Slot cost: -1" <<
+				"\nSpells Available: +1";
+			break;
+		case 4:
+			std::cout <<
+				"\nSpell Slot cost: -1" <<
+				"\nItems Available: +1" <<
+				"\nSpells Available: +1";
+			break;
+		case 5:
+			std::cout <<
+				"\nShop fully upgraded!";
+			break;
+		default:
+			std::cout << "\nhuh?";
+			break;
+		}
+
+		if (shopLevel != 5) {
+
+			std::cout << "\n\nDo you want to upgrade? Type 1 to upgrade, anything else to cancel.\n";
+
+			std::cin >> upgradeChoice;
+
+			handleInputFailure("Cancelling shop upgrade.");
+
+			if (upgradeChoice == 1 && player.gold >= shopUpgradePrice) {
+				switch (shopLevel) {
+
+				case 1:
+					refreshCost -= 1;
+					slotPriceReduction++;
+					std::cout << "\nShop upgraded!";
+					break;
+
+				case 2:
+					refreshCost -= 1;
+					objectsAvailable++;
+					std::cout << "\nShop upgraded!";
+					break;
+				case 3:
+					refreshCost -= 1;
+					slotPriceReduction++;
+					spellsAvailable++;
+					std::cout << "\nShop upgraded!";
+					break;
+				case 4:
+					objectsAvailable++;
+					slotPriceReduction++;
+					spellsAvailable++;
+					std::cout << "\nShop upgraded!";
+					break;
+
+				}
+				player.gold -= shopUpgradePrice;
+				shopLevel++;
+			}
+			else {
+				std::cout << "\nNot enough gold to upgrade shop!\n";
+
+			}
+		}
+		
+	}
+
 	void itemManage() {
 
 		int manageChoice;
@@ -2541,7 +2637,7 @@ public:
 			}
 		}
 
-		if (!spellsGenerated) while (spellsInShop.size() < std::min(3, availableCount)) {
+		if (!spellsGenerated) while (spellsInShop.size() < std::min(spellsAvailable, availableCount)) {
 
 			int randomSpell = rand() % availableSpells.size(); // gets a random spell from the spells available in the game
 			char spellId = availableSpells[randomSpell];
@@ -2611,7 +2707,7 @@ public:
 			std::cout << "\nYou have " << player.gold << " Gold | HP: " << drawHealthBar(player.playerHealth, player.playerMaxHealth) << "\n"
 				<< "----- Shop -----\n"
 				<< "1) Shop Goods   - Buy items, spells, or healing\n"
-				<< "2) Tools        - Manage items, refresh stock, check stats\n"
+				<< "2) Tools        - Manage items, refresh stock, check stats, upgrade shop\n"
 				<< "3) Travel       - View map or leave shop\n";
 
 
@@ -2642,24 +2738,26 @@ public:
 			case 2:
 				std::cout << "\n----- Tools -----\n"
 					<< "1) Manage Items\n"
-					<< "2) Refresh (8 Gold)\n"
-					<< "3) Check Stats\n";
+					<< "2) Refresh (" << refreshCost << " gold)\n"
+					<< "3) Check Stats\n"
+					<< "4) Upgrade Shop\n";
                               
                     std::cin >> shopChoice;
                     if (handleInputFailure("Choose 1-3.\n")) continue;
 					switch (shopChoice) {
 					case 1: itemManage(); break;
 					case 2:
-						if (player.gold >= 8) {
-							player.gold -= 8;
+						if (player.gold >= refreshCost) {
+							player.gold -= refreshCost;
 							shopRefresh();
 							std::cout << "\nShop refreshed.\n";
 						}
 						else {
-							std::cout << "\nYou need 8 gold to refresh the shop.\n";
+							std::cout << "\nYou need " << refreshCost << " gold to refresh the shop.\n";
 						}
 						break;
 					case 3: player.displayStats(); break;
+					case 4: shopUpgradeMenu(); break;
 					}
 					break;
 			case 3: 
