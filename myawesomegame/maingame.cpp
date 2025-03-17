@@ -42,6 +42,8 @@ unsigned short bonusFreeItemTurnChance = 0;
 unsigned short bonusSpellSlots = 0;
 unsigned short bonusLifeSteal = 0;
 unsigned short bonusDefensiveStanceDuration = 0;
+unsigned short bonusStatusDuration = 0;
+unsigned short bonusStatusApplyChance = 0;
 std::string playerSpeciality = "fuck";
 
 void startMenu() {
@@ -213,7 +215,8 @@ void encyclopedia() {
 			std::cout << "\nMagic speciality grants you a spell slot, and slightly bumps magic damage"
 				<<"\nItems speciality grants you increased item damage, some gold, and a higher chance to get a free action with items"
 				<<"\nMelee speciality grants you a slight buff to defense, melee damage, crit chance, and a slight life steal on hit"
-				<<"\nDefense speciality grants you a generous boost to defense and max health, and increases the eficacy of defending in combat.";
+				<<"\nDefense speciality grants you a generous boost to defense and max health, and increases the eficacy of defending in combat."
+				<<"\nControl speciality increases the duration of beneficial status effects by 1, and increases the odds of inflicting a status by 10%";
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			std::cin.get();
 			break;
@@ -725,7 +728,7 @@ public:
 			newEffect.statusId = '0';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 5;
-			newEffect.duration = 4;
+			newEffect.duration = 4 + bonusStatusDuration;
 			newEffect.buffTarget = '0';
 			break;
 		case 1:
@@ -734,7 +737,7 @@ public:
 			newEffect.statusId = '1';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 3;
-			newEffect.duration = 4;
+			newEffect.duration = 4 + bonusStatusDuration;
 			newEffect.buffTarget = '1';
 			break;
 		case 2:
@@ -743,7 +746,7 @@ public:
 			newEffect.statusId = '2';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 3;
-			newEffect.duration = 4;
+			newEffect.duration = 4 + bonusStatusDuration;
 			newEffect.buffTarget = '2';
 			break;
 		case 3:
@@ -752,7 +755,7 @@ public:
 			newEffect.statusId = '3';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 3;
-			newEffect.duration = 5;
+			newEffect.duration = 5 + bonusStatusDuration;
 			newEffect.buffTarget = '3';
 			break;
 		case 4:
@@ -761,7 +764,7 @@ public:
 			newEffect.statusId = '4';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 4;
-			newEffect.duration = 4;
+			newEffect.duration = 4 + bonusStatusDuration;
 			newEffect.buffTarget = '4';
 			break;
 		case 5:
@@ -770,7 +773,7 @@ public:
 			newEffect.statusId = '5';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 4;
-			newEffect.duration = 4;
+			newEffect.duration = 4 + bonusStatusDuration;
 			newEffect.buffTarget = '5';
 			break;
 		case 6:
@@ -779,7 +782,7 @@ public:
 			newEffect.statusId = '6';
 			newEffect.type = 'h';
 			newEffect.strengthValue = 2;
-			newEffect.duration = 6;
+			newEffect.duration = 6 + bonusStatusDuration;
 			newEffect.buffTarget = '-1';
 			break;
 		case 7:
@@ -788,7 +791,7 @@ public:
 			newEffect.statusId = '7';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 5 + bonusDefense;
-			newEffect.duration = 3 + bonusDefensiveStanceDuration;
+			newEffect.duration = 3 + bonusDefensiveStanceDuration + bonusStatusDuration;
 			newEffect.buffTarget = '6';
 			break;
 		case 8:
@@ -800,13 +803,29 @@ public:
 			newEffect.duration = 2;
 			newEffect.buffTarget = '-1';
 			break;
+		case 9:
+			newEffect.name = "Burning";
+			newEffect.actionName = "Burning";
+			newEffect.statusId = '9';
+			newEffect.type = 'd';
+			newEffect.strengthValue = 4;
+			newEffect.duration = 2;
+			newEffect.buffTarget = '-1';
+			break;
+
 		default:
 			break;
 		}
+	
 		if (onPlayer) {
 			playerStatuses.push_back(newEffect);
 		}
 		else {
+			if (newEffect.type == 'd'){
+				newEffect.duration += bonusStatusDuration;
+				std::cout << "\nEnemy suffers from " << newEffect.actionName;
+			}
+			
 			enemyStatuses.push_back(newEffect);
 		}
 
@@ -919,13 +938,32 @@ public:
 
 	void tickEnemyStatus() {
 		if (!enemyStatuses.empty()) {
-			for (int i = 0; i < enemyStatuses.size(); i++) {
+			for (auto it = enemyStatuses.begin(); it != enemyStatuses.end(); ) {
+				if (it->duration == 0) {
+					
 
+					std::cout << "\n" << it->name << " ran out on enemy\n";
+					it = enemyStatuses.erase(it);
 
+				}
+				else {
+					if (it->type == 'd') {
+						opponent.takeDamage(it->strengthValue);
+						std::cout << "Enemy lost " << "HP due to " << it->actionName << std::endl;
+						it->duration--;
+					}
+
+				}
+				++it;
 			}
 		}
 	}
 
+	void clearEnemyStatus() {
+
+		enemyStatuses.clear();
+
+	}
 };
 
 void basicEnemyAi(character& player, enemy& opponent) {
@@ -1172,6 +1210,9 @@ public:
 			spellName = "Spark";
 			attributePowerModifier = 0.33f;
 			scalingAttribute = '2'; // wis faith
+			statusEffectId = 9;
+			statusApplyChance = 20.0f;
+			statusOnPlayer = false;
 			spellSlotCost = 1;
 			spellPrice = 5;
 			baseHealing = 0;
@@ -1342,7 +1383,20 @@ public:
 			spellSlotCost = 1;
 			spellPrice = 20;
 			break;
-
+		case 22:
+			baseHealing = 0;
+			healthCost = 4;
+			baseDamage = 1;
+			spellName = "Fire Aura";
+			attributePowerModifier = 0.1f;
+			scalingAttribute = '7'; // end faith
+			statusEffectId = 9;
+			statusApplyChance = 75.0f;
+			statusOnPlayer = false;
+			spellSlotCost = 0;
+			intensityChange = 3;
+			spellPrice = 90;
+			break;
 
 
 		default:
@@ -1432,8 +1486,8 @@ public:
 				status.grantStatusEffect(player,opponent, true, statusEffectId);
 			}
 			else {
-				rolledNumber = (rand() % 100) + 1;
-				if (statusApplyChance > rolledNumber);
+				int statusRoll = (rand() % 100) + 1;
+				if ((statusApplyChance + bonusStatusApplyChance) > statusRoll)
 				status.grantStatusEffect(player, opponent, false, statusEffectId);
 
 			}
@@ -2351,7 +2405,7 @@ private:
 	bool spellsGenerated = false;
 	bool doneShopping = false;
 	bool shopUpgraded = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16, 17, 18, 19, 20, 21 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -3060,6 +3114,7 @@ public:
 
 			battling = false;
 			std::cout << "\n you win!";
+			status.clearEnemyStatus();
 		}
 		if (player.playerHealth <= 0) {
 
@@ -3206,10 +3261,10 @@ public:
 		std::cout << "+-----------------------------------------------------+\n";
 		while (battling)  {
 			turnTaken = false;
-			//status.tickStatus(player, opponent);
+			
 
 			if(turnsElapsed % 2 == 0){
-
+			
 				
 				
 					std::cout << "\n" << opponent.name << ": " << drawHealthBar(opponent.enemyHealth, opponent.enemyMaxHealth)
@@ -3368,22 +3423,22 @@ public:
 			winLogic();
 
 			if (turnsElapsed % 2 == 1) {
+				status.tickEnemyStatus();
+				if (opponent.enemyHealth) {
+					switch (opponent.aiType) {
 
-				switch (opponent.aiType) {
+					case '1':
+						basicEnemyAi(player, opponent);
+						break;
+					case '2':
+						poisonerEnemyAi(player, status, opponent);
+						break;
+					default:
+						basicEnemyAi(player, opponent);
+						break;
+					}
 
-				case '1':
-					basicEnemyAi(player, opponent);
-					break;
-				case '2':
-					poisonerEnemyAi(player, status, opponent);
-					break;
-				default:
-					basicEnemyAi(player, opponent);
-					break;
 				}
-
-				
-			
 			}
 
 			}
@@ -3558,7 +3613,7 @@ void pickNameColor(character& player) {
 	std::cin >> choice;
 	player.nameColor = (choice >= 1 && choice <= 3) ? choice + 3 : 7;  // 4=Red, 5=Blue, 6=Green, 7=Default
 }
-void pickSpeciality(character& player) {
+void pickSpeciality(character& player, spells& spell) {
 		bool specialityPicked = false;
 		int specialityChosen = '0';
 		while (!specialityPicked) {
@@ -3567,15 +3622,15 @@ void pickSpeciality(character& player) {
 				<< "\n1) Magic"
 				<< "\n2) Items"
 				<< "\n3) Melee"
-				<< "\n4) Defense\n"
-				<< "\n5) Control (not yet implemented)\n";
+				<< "\n4) Defense"
+				<< "\n5) Control\n";
 			std::cin >> specialityChosen;
 			
 
-			if(handleInputFailure("\Invalid Input, enter a number from 1-4")) {
+			if(handleInputFailure("\Invalid Input, enter a number from 1-5")) {
 				continue;
 			}
-			if (specialityChosen > 4 || specialityChosen < 1) {
+			if (specialityChosen > 5 || specialityChosen < 1) {
 				std::cout << "\Invalid Input, enter a number from 1-4";
 				continue;
 			}
@@ -3584,30 +3639,38 @@ void pickSpeciality(character& player) {
 			
 			case 1: // magic
 				bonusSpellSlots++;
-				bonusSpellDamage += 2;
+				bonusSpellDamage = 2;
 				playerSpeciality = "Magic";
 				specialityPicked = true;
 				break;
 			case 2: // items
-				bonusItemDamage += 2;
-				bonusFreeItemTurnChance += 5;
+				bonusItemDamage = 2;
+				bonusFreeItemTurnChance = 5;
 				player.grantGold(10);
 				playerSpeciality = "Items";
 				specialityPicked = true;
 				break;
 			case 3: // melee
-				bonusMeleeDamage += 1;
-				bonusCritChance += 2;
-				bonusLifeSteal += 1;
-				bonusDefense += 1;
+				bonusMeleeDamage = 1;
+				bonusCritChance = 2;
+				bonusLifeSteal = 1;
+				bonusDefense = 1;
 				playerSpeciality = "Melee";
 				specialityPicked = true;
 				break;
 			case 4: // defense
-				bonusDefense += 5;
-				bonusHealth += 4;
+				bonusDefense = 5;
+				bonusHealth = 4;
 				bonusDefensiveStanceDuration = 2;
 				playerSpeciality = "Defense";
+				specialityPicked = true;
+				break;
+			case 5: // control
+				bonusStatusDuration = 1;
+				bonusStatusApplyChance = 10.0f;
+				bonusDefensiveStanceDuration = 1;
+				spell.grantPlayerSpell(22);
+				playerSpeciality = "Control";
 				specialityPicked = true;
 				break;
 			}
@@ -3629,6 +3692,7 @@ int main() {
 	pickName(test1);
 	pickNameColor(test1);
 
+
 	bool gameStarted = false;
 
 	enemy test;
@@ -3637,7 +3701,7 @@ int main() {
 	items testitem(teststatus);
 	
 	while (!gameStarted) {
-		pickSpeciality(test1);
+		pickSpeciality(test1,spelltest);
 		test1.pickAttributes();
 		gameStarted = test1.confirmChoices();
 
