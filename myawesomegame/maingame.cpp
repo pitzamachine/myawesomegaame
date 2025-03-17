@@ -1,13 +1,16 @@
 #define NOMINMAX
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 #include <iostream>
 #include <string>
-#include <Windows.h>
 #include <ctime>
 #include <cmath>
 #include <vector>
 #include <limits>
 #include <unordered_map>
-#include "startgame.h"
 #include <algorithm>
 #include <iomanip>
 
@@ -41,6 +44,16 @@ unsigned short bonusLifeSteal = 0;
 unsigned short bonusDefensiveStanceDuration = 0;
 std::string playerSpeciality = "fuck";
 
+void startMenu() {
+	std::cout << " - - - - Welcome to... - - - - \n"
+		"    __                    \n"
+		"   /                      \n"
+		"   |                      \n"
+		"   |                      \n"
+		"   |                      \n"
+		"   \\__   0rvids          \n\n";
+}
+
 std::string drawIntensityBar(int currentIntensity, int maxIntensity) {
 	const int barWidth = 10; // Compact, adjustable
 	std::string bar = "[";
@@ -64,13 +77,7 @@ std::string drawHealthBar(int currentHP, int maxHP) {
 }
 
 void clear() {
-	// CSI[2J clears screen, CSI[H moves the cursor to top-left corner
 	std::cout << "\x1B[2J\x1B[H";
-	int b = 0;
-	while (b < 100, b++) {
-
-		std::cout << "             \n\n\n\n\n";
-	}
 }
 
 struct EnemyStats {
@@ -120,7 +127,22 @@ void attributeInformation(int choice) {
 }
 
 void setColor(int color) {
+#ifdef _WIN32
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+#else
+	switch (color) {
+	case 3: std::cout << "\033[36m"; break; // Cyan
+	case 4: std::cout << "\033[31m"; break; // Red
+	case 6: std::cout << "\033[33m"; break; // Yellow
+	case 7: std::cout << "\033[0m"; break;  // Reset
+	case 10: std::cout << "\033[32m"; break; // Green
+	case 12: std::cout << "\033[91m"; break; // Bright Red
+	case 13: std::cout << "\033[95m"; break; // Bright Magenta
+	case 14: std::cout << "\033[93m"; break; // Bright Yellow
+	case 15: std::cout << "\033[97m"; break; // Bright White
+	default: std::cout << "\033[0m"; break;
+	}
+#endif
 }
 
 void generateRandomTip() {

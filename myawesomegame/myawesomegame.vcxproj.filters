@@ -18,11 +18,5 @@
     <ClCompile Include="maingame.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="startgame.h">
-      <Filter>Archivos de recursos</Filter>
-    </ClCompile>
-    <ClCompile Include="startgame.cpp">
-      <Filter>Archivos de recursos</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
