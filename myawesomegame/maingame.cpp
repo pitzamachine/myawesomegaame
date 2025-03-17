@@ -54,7 +54,7 @@ void startMenu() {
 		"   \\__   0rvids          \n\n";
 }
 
-std::string drawIntensityBar(int currentIntensity, int maxIntensity) {
+std::string static drawIntensityBar(int currentIntensity, int maxIntensity) {
 	const int barWidth = 10; // Compact, adjustable
 	std::string bar = "[";
 	int filled = (currentIntensity * barWidth) / maxIntensity; // Scale 0-30 to 0-10
@@ -99,7 +99,7 @@ const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 	{"Soul Sucker",{75, 8, 10, 16, 60, '2', 4}},
 	{"Living Armor", {90, 14, 6, 20, 100,'1', 5}},	
 	{"Fear Monger", {100,12,12,25, 150,'3', 6}},
-	{ "The Grand Alfred", {120,10,10,30, 150,'4', 7}},
+	{ "The Grand Crow", {120,10,10,30, 150,'4', 7}},
 	{ "Fat Dragon", {195,25,25,70, 250,'4', 9}},
 	{ "Penultimate Knight", {230,34,22,90, 350,'3', 10}}
 };
@@ -118,12 +118,6 @@ bool handleInputFailure(const std::string& errorMessage) {
 		return true; // Indicates failure occurred
 	}
 	return false; // No failure
-}
-
-void attributeInformation(int choice) {
-
-
-
 }
 
 void setColor(int color) {
@@ -182,19 +176,20 @@ void encyclopedia() {
 		std::cout << "\nWelcome to the encyclopedia, pick an option to learn more" <<
 			"\n(This information is good to know, but not absolutely necessary to succeed.)" <<
 			"\n1) Attributes" <<
-			"\n2) Starting Bonuses" << 
+			"\n2) Specialities" << 
 			"\n3) Tips" <<
+			"\n4) Gameplay" <<
 
-			"\n4) Back\n";
+			"\n5) Back\n";
 
 		std::cin >> input;
 
-		if (handleInputFailure("\nPick option 1 to 3")) {
+		if (handleInputFailure("\nPick option 1 to 5")) {
 			continue;
 
 		}
-		if (input > 4 || input < 1) {
-			std::cout << "\nPick a number 1 to 4";
+		if (input > 5 || input < 1) {
+			std::cout << "\nPick a number 1 to 5";
 			continue;
 		}
 
@@ -203,14 +198,22 @@ void encyclopedia() {
 		case 1:
 			outEncyclopedia = false;
 			std::cout << "\n--- Attributes ---\n";
-			std::cout << "";
+			std::cout << "\nEndurance increases HP and defense primarily, but also affects the healing from some spells."
+				<< "\nStrength: Increases melee damage and minimum melee damage, as well as defense slighty. "
+				<< "\nDexterity increases damage from daggers primarily, your odds at fleeing battles, and your critical chance."
+				<< "\nWisdom increases how many spell slots you have, and the damage dealt from wisdom based spells."
+				<< "\nLuck influences many things, such as the chance to flee or get another turn when using an item. It's not bad to have"
+				<< "\nFaith primarily increases the damage and healing from faith spells, it also increases your spell slots, but at a slower rate.";
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			std::cin.get();
 			break;
 		case 2:
 			outEncyclopedia = false;
-			std::cout << "\n--- Starting Bonuses ---\n";
-				
+			std::cout << "\n--- Specialities ---\n";
+			std::cout << "\nMagic speciality grants you a spell slot, and slightly bumps magic damage"
+				<<"\nItems speciality grants you increased item damage, some gold, and a higher chance to get a free action with items"
+				<<"\nMelee speciality grants you a slight buff to defense, melee damage, crit chance, and a slight life steal on hit"
+				<<"\nDefense speciality grants you a generous boost to defense and max health, and increases the eficacy of defending in combat.";
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			std::cin.get();
 			break;
@@ -222,11 +225,30 @@ void encyclopedia() {
 			break;
 
 		case 4:
+			std::cout << "\n--- Gameplay ---";
+			std::cout << "\n-Intensity: Intensity increases almost all types of damage dealt, and taken."
+				<< "\nIf intensity rises too far, enemies can start to get very strong, though, you can aswell."
+				<< "\nIt's usually wiser to kill enemies before things get out of hand, as your fleeing odds decrease"
+				<< "\nas intensity rises. Gold dropped will also decrease as intensity rises, though, not dramatically.\n"
+				<< "\n-Zones: Zones apply random multipliers to difficulty, gold dropped, and experience dropped from enemies."
+				<< "\nThe 6th battle in every zone is a miniboss, and you are warned about them in the shop beforehand."
+				<< "\nCurrently, they don't do anything apart from that, but are a neat way to track progress.\n"
+				<< "\n-Shops: Shops allow you to buy items, healing, and spells, which are needed to survive."
+				<< "\nThe shop can be upgraded 4 times, increasing its variety and reducing the cost of refreshing it.\n"
+				<< "\n-Combat: Combat is turn-based, you will always take the first turn, and the enemy always second."
+				<< "\nEvery action takes a turn, except for looking through your spells, items, or checking stats."
+				<< "\nCombat against minibosses is the same as for normal enemies, except fleeing is much more difficult,"
+				<< "\nbut not impossible.\n";
+			
+			break;
+
+		
+		case 5:
 
 			outEncyclopedia = true;
 			break;
 
-		
+
 		}
 
 
@@ -237,6 +259,16 @@ void encyclopedia() {
 
 
 };
+
+void beforeStarting() {
+
+	std::cout << "\nYour adventure begins in the world of crows..."
+		<<"\nPress enter to begin...";
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	std::cin.get();
+	clear();
+
+}
 
 void mainMenu() {
 
@@ -385,9 +417,9 @@ public:
 
 			std::cin >> attributeAssigner;
 
-			if (handleInputFailure("\nInvalid input! Please enter a valid number between 1 and 6.")){
+			if (handleInputFailure("\nInvalid input! Please enter a valid number between 1 and 6.")) {
 				continue;
-		}
+			}
 			if (attributeAssigner < 1 || attributeAssigner > 6) {
 				std::cout << "Number out of range, try again.\n";
 				continue;
@@ -440,7 +472,7 @@ public:
 				luck += pointsToAssign;
 				attributePoints -= pointsToAssign;
 				std::cout << pointsToAssign << " points assigned to Luck. New value: " << luck << "\n";
-				
+
 				break;
 			case 6:
 
@@ -455,18 +487,18 @@ public:
 
 			}
 			updateCharacterStats();
-			if (playerHealth < playerMaxHealth)
-				playerHealth += playerMaxHealth - playerHealth;
-		
+			
+			playerHealth = playerMaxHealth;
+
 		}
 		clear();
-		
+
 		std::cout << "Attribute points assigned.\n";
 	}
 	void updateCharacterStats() {
 
-		playerMaxHealth = 10 + bonusHealth + 3*(level-1) + endurance * 3;
-		defense = 1 + endurance * 2 + strength * 1 + (level*0.5) + bonusDefense;
+		playerMaxHealth = 10 + bonusHealth + 3 * (level - 1) + endurance * 3;
+		defense = 1 + endurance * 2 + strength * 1 + (level * 0.5) + bonusDefense;
 		temporaryDefense = defense;
 		magicDefense = faith * 3 + wisdom * 1 + luck * 1;
 		maximumSpellsAvailable = (faith / 4.5f + wisdom / 2.7f) + bonusSpellSlots; // adds up the 3 variables and rounds down
@@ -475,7 +507,7 @@ public:
 	void updateMaxHealth() {
 
 		playerMaxHealth = 10 + bonusHealth + 3 * (level - 1) + endurance * 3;
-		
+
 	}
 	void takeDamage(int damage) {
 		std::cout << std::endl << "You took " << damage << " damage!" << std::endl;
@@ -491,17 +523,59 @@ public:
 		faith = stat6;
 		updateCharacterStats();
 		playerHealth = playerMaxHealth;
-		
+
 
 	};
 	int calculateMeleeDamage(int enemyDefense) {
-		float baseDamage = static_cast<int>((strength *(0.92 + intensity * 0.08))-static_cast<float>(enemyDefense/0.92f));		
-		int minimumDamage = 1 + static_cast<int>(strength / 4.5f + faith/10.0f + wisdom/10.0f + luck/10.0f + dexterity/10.0f);
+		float baseDamage = static_cast<int>((strength * (0.92 + intensity * 0.08)) - static_cast<float>(enemyDefense / 0.92f));
+		int minimumDamage = 1 + static_cast<int>(strength / 4.5f + faith / 10.0f + wisdom / 10.0f + luck / 10.0f + dexterity / 10.0f);
 		int damage = baseDamage * calcDamageVariance();
 		if (damage < minimumDamage) damage = minimumDamage;
-		
+
 		return damage + bonusMeleeDamage;
 	}
+	bool confirmChoices() {
+		updateCharacterStats();
+		int startChoice = 0;
+		bool gameStarted = false;
+		
+	
+
+		while (true) {
+
+			displayStats();
+			std::cout << "\nDo you wish to start with the following character? 1 for yes, 2 for no.\n";
+			std::cin >> startChoice;
+
+			if (handleInputFailure("\nPick 1 or 2") || startChoice > 2 || startChoice < 1) {
+
+				continue;
+			}
+
+			if (startChoice == 1) {
+				return true;
+			}
+			else {
+				std::cout << "\nResetting attributes...\n";
+				attributePoints = 15;
+				endurance = 0;
+				strength = 0;
+				dexterity = 0;
+				wisdom = 0;
+				luck = 0;
+				faith = 0;
+				pickAttributes();
+				updateCharacterStats();
+
+			}
+		}
+
+
+
+
+	}
+
+
 
 	bool criticalCalculator() {
 
@@ -584,6 +658,14 @@ public:
 		if (finalDamage < minimumDamage) finalDamage = minimumDamage;
 		return finalDamage;
 	};
+
+	float enemyDisplayDamage(character& player, float variance) {
+		float baseDamage = (attack * (1 + static_cast<float>(intensity) / 8)) - player.defense / 3;
+		int minimumDamage = (1 + attack / 6);
+		int finalDamage = static_cast<int>(baseDamage * variance);
+		if (finalDamage < minimumDamage) finalDamage = minimumDamage;
+		return finalDamage;
+	}
 
 	void displayStatsTest() {
 		std::cout << "Enemy: " << name << " | HP: " << enemyHealth << "/" << enemyMaxHealth
@@ -3061,7 +3143,7 @@ public:
 		int randomXP = 0;
 		int randomGold = 0;
 		char randomAI = '1';
-		std::string randomName = "Alfred";
+		std::string randomName = "Crow";
 
 
 		if (totalRounds == 6) {
@@ -3096,7 +3178,7 @@ public:
 		randomXP *= zones.getExpAmplifier();
 		randomGold = (rand() % 8 + player.luck / 3) + player.level * 3 + randomXP/16 ;
 		randomGold *= zones.getGoldAmplifier();
-		randomName = "alfred " + std::to_string(rand() % 200);
+		randomName = "Crowbob " + std::to_string(rand() % 200);
 		randomAI = '1' + rand() % 2;
 
 		
@@ -3132,7 +3214,7 @@ public:
 				
 					std::cout << "\n" << opponent.name << ": " << drawHealthBar(opponent.enemyHealth, opponent.enemyMaxHealth)
 					<< " " << opponent.enemyHealth << "/" << opponent.enemyMaxHealth
-					<< " | Atk: " << opponent.enemyCalculateMeleeDamage(player) << "\n";
+					<< " | Atk: " << opponent.enemyDisplayDamage(player, 0.9) << " - " << opponent.enemyDisplayDamage(player, 1.1) << "\n";
 				std::cout << "You: " << drawHealthBar(player.playerHealth, player.playerMaxHealth)
 					<< " " << player.playerHealth << "/" << player.playerMaxHealth << "\n"
 				<< std::endl << "1) Attack" << " | Damage: " << player.calculateMeleeDamage(opponent.defense)
@@ -3195,7 +3277,7 @@ public:
 			case 3:
 			{
 				std::cout <<"\nSpells Available: "<< player.spellsAvailable << "\n";
-				std::cout << "\Temporary Slots: " << player.temporarySpellSlots << "\n";
+				std::cout << "\nTemporary Slots: " << player.temporarySpellSlots << "\n";
 				char spellUsed = spell.displaySpellMenu(player);
 				if (spellUsed == 'f') break;  //f is the default 
 				spell.updateSpell(spellUsed);
@@ -3515,7 +3597,7 @@ void pickSpeciality(character& player) {
 				break;
 			case 3: // melee
 				bonusMeleeDamage += 1;
-				bonusCritChance += 3;
+				bonusCritChance += 2;
 				bonusLifeSteal += 1;
 				bonusDefense += 1;
 				playerSpeciality = "Melee";
@@ -3547,18 +3629,22 @@ int main() {
 	pickName(test1);
 	pickNameColor(test1);
 
-
-	
-	
+	bool gameStarted = false;
 
 	enemy test;
 	statuseffects teststatus(test1, test);
 	spells spelltest(teststatus,test);
 	items testitem(teststatus);
 	
-	
-	pickSpeciality(test1);
-	test1.pickAttributes();
+	while (!gameStarted) {
+		pickSpeciality(test1);
+		test1.pickAttributes();
+		gameStarted = test1.confirmChoices();
+
+	}
+
+
+	beforeStarting();
 	//clear();
 
 	startingBonus(test1, testitem, spelltest);
