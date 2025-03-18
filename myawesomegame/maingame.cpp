@@ -321,6 +321,7 @@ struct statusEffect {
 
 	std::string name;
 	std::string actionName;
+	std::string shortenedName;
 	short statusId = 0;
 	char type = 'h';
 	unsigned short strengthValue = 0;
@@ -500,7 +501,7 @@ public:
 	}
 	void updateCharacterStats() {
 
-		playerMaxHealth = 10 + bonusHealth + 3 * (level - 1) + endurance * 3;
+		playerMaxHealth = 12 + bonusHealth + 3 * (level - 1) + endurance * 3;
 		defense = 1 + endurance * 2 + strength * 1 + (level * 0.5) + bonusDefense;
 		temporaryDefense = defense;
 		magicDefense = faith * 3 + wisdom * 1 + luck * 1;
@@ -725,6 +726,7 @@ public:
 		case 0:
 			newEffect.name = "Endurance Boost";
 			newEffect.actionName = "Endurance";
+			newEffect.shortenedName = "Endurance+";
 			newEffect.statusId = '0';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 5;
@@ -734,6 +736,7 @@ public:
 		case 1:
 			newEffect.name = "Strength Boost";
 			newEffect.actionName = "Feeling Strong";
+			newEffect.shortenedName = "Strength+";
 			newEffect.statusId = '1';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 3;
@@ -743,6 +746,7 @@ public:
 		case 2:
 			newEffect.name = "Dexterity Boost";
 			newEffect.actionName = "Dexterity";
+			newEffect.shortenedName = "Dexterity+";
 			newEffect.statusId = '2';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 3;
@@ -752,15 +756,17 @@ public:
 		case 3:
 			newEffect.name = "Wisdom Boost";
 			newEffect.actionName = "Feeling smart";
+			newEffect.shortenedName = "Wisdom+";
 			newEffect.statusId = '3';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 3;
-			newEffect.duration = 5 + bonusStatusDuration;
+			newEffect.duration = 4 + bonusStatusDuration;
 			newEffect.buffTarget = '3';
 			break;
 		case 4:
 			newEffect.name = "Luck Boost";
 			newEffect.actionName = "Feeling lucky";
+			newEffect.shortenedName = "Luck+";
 			newEffect.statusId = '4';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 4;
@@ -770,6 +776,7 @@ public:
 		case 5:
 			newEffect.name = "Faith Boost";
 			newEffect.actionName = "Faithfulness";
+			newEffect.shortenedName = "Faith+";
 			newEffect.statusId = '5';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 4;
@@ -779,6 +786,7 @@ public:
 		case 6:
 			newEffect.name = "Minor Regeneration";
 			newEffect.actionName = "Minor Regeneration";
+			newEffect.shortenedName = "Minor Regen";
 			newEffect.statusId = '6';
 			newEffect.type = 'h';
 			newEffect.strengthValue = 2;
@@ -788,6 +796,7 @@ public:
 		case 7:
 			newEffect.name = "Defensive Stance";
 			newEffect.actionName = "Defending";
+			newEffect.shortenedName = "Def. Stance";
 			newEffect.statusId = '7';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 5 + bonusDefense;
@@ -797,6 +806,7 @@ public:
 		case 8:
 			newEffect.name = "Poison";
 			newEffect.actionName = "Poisoning";
+			newEffect.shortenedName = "Poison";
 			newEffect.statusId = '8';
 			newEffect.type = 'd';
 			newEffect.strengthValue = 3;
@@ -806,12 +816,44 @@ public:
 		case 9:
 			newEffect.name = "Burning";
 			newEffect.actionName = "Burning";
+			newEffect.shortenedName = "Burning";
 			newEffect.statusId = '9';
 			newEffect.type = 'd';
-			newEffect.strengthValue = 4;
+			newEffect.strengthValue = 3;
 			newEffect.duration = 2;
 			newEffect.buffTarget = '-1';
 			break;
+		case 10:
+			newEffect.name = "Overload";
+			newEffect.actionName = "Extreme Strength";
+			newEffect.shortenedName = "OVERLOAD!";
+			newEffect.statusId = '10';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 18;
+			newEffect.duration = 2 + bonusStatusDuration;
+			newEffect.buffTarget = '1';
+			break;
+		case 11:
+			newEffect.name = "Lingering Poison";
+			newEffect.actionName = "Poisoning";
+			newEffect.shortenedName = "Poison";
+			newEffect.statusId = '11';
+			newEffect.type = 'd';
+			newEffect.strengthValue = 2;
+			newEffect.duration = 8;
+			newEffect.buffTarget = '-1';
+			break;
+		case 12:
+			newEffect.name = "Protective Aura";
+			newEffect.actionName = "Protection";
+			newEffect.shortenedName = "Prot. Aura";
+			newEffect.statusId = '12';
+			newEffect.type = 'b';
+			newEffect.strengthValue = 2 + bonusDefense;
+			newEffect.duration = 8 + bonusStatusDuration;
+			newEffect.buffTarget = '-1';
+			break;
+
 
 		default:
 			break;
@@ -921,7 +963,7 @@ public:
 					}
 					if (it->type == 'b') {
 						if (!it->buffApplied) {
-							std::cout << "\nApplying buff: " << it->name << " (Target: " << it->buffTarget << ", Strength: " << it->strengthValue << ")\n";
+							std::cout << "\nApplying buff: " << it->name;
 							changeBuffedStat(it->strengthValue, it->buffTarget);
 							it->buffApplied = true;
 						}
@@ -951,10 +993,10 @@ public:
 						opponent.takeDamage(it->strengthValue);
 						std::cout << "Enemy lost " << "HP due to " << it->actionName << std::endl;
 						it->duration--;
+						if (opponent.enemyHealth <= 0) break;
 					}
-
+					++it;
 				}
-				++it;
 			}
 		}
 	}
@@ -964,6 +1006,34 @@ public:
 		enemyStatuses.clear();
 
 	}
+	void displayPlayerStatuses() {
+		if (playerStatuses.empty()) {
+			std::cout << "\nStatus: None";
+			return;
+		}
+
+		std::cout << "\nStatus: ";
+		for (const auto& effect : playerStatuses) {
+			
+			if (effect.type == 'd') {
+				setColor(4); // red
+			}
+			else if (effect.type == 'h') { 
+				setColor(10); // green
+			}
+			else if (effect.type == 'b') { 
+				setColor(6); // yellow
+			}
+
+		
+			std::string displayName = effect.shortenedName;
+			
+			std::cout << "[" << displayName << "(" << effect.duration + 1 << ")] ";
+
+			setColor(7);
+		}
+	}
+
 };
 
 void basicEnemyAi(character& player, enemy& opponent) {
@@ -1271,7 +1341,7 @@ public:
 			healthCost = 6;
 			baseDamage = 12;
 			spellName = "High Sacrifice";
-			attributePowerModifier = 1.05f;
+			attributePowerModifier = 1.25f;
 			scalingAttribute = '7'; // end faith
 			spellSlotCost = 2;
 			spellPrice = 45;
@@ -1397,8 +1467,48 @@ public:
 			intensityChange = 3;
 			spellPrice = 90;
 			break;
-
-
+		case 23:
+			baseHealing = 0;
+			healthCost = 12;
+			baseDamage = 4;
+			spellName = "Destructive Channeling";
+			attributePowerModifier = 0.5f;
+			scalingAttribute = '0'; // wisdom
+			statusEffectId = 10;
+			statusApplyChance = 100.0f;
+			statusOnPlayer = true;
+			spellSlotCost = 2;
+			intensityChange = 0;
+			spellPrice = 70;
+			break;
+		case 24:
+			baseHealing = 0;
+			healthCost = 0;
+			baseDamage = 0;
+			spellName = "Poison Cloud";
+			attributePowerModifier = 0.5f;
+			scalingAttribute = '0'; // wisdom
+			statusEffectId = 11;
+			statusApplyChance = 85.0f;
+			statusOnPlayer = false;
+			spellSlotCost = 1;
+			intensityChange = 0;
+			spellPrice = 30;
+			break;
+		case 25:
+			baseHealing = 2;
+			healthCost = 0;
+			baseDamage = 0;
+			spellName = "Protective Aura";
+			attributePowerModifier = 0.5f;
+			scalingAttribute = '0'; // wisdom
+			statusEffectId = 12;
+			statusApplyChance = 100.0f;
+			statusOnPlayer = true;
+			spellSlotCost = 1;
+			intensityChange = -1;
+			spellPrice = 50;
+			break;
 		default:
 			std::cout << "\nWrong and nto good";
 			break;
@@ -1713,7 +1823,7 @@ public:
 
 		case 0:
 			itemName = "Rock";
-			itemDamage = 12;
+			itemDamage = 11;
 			scalingType = "intensity";
 			itemType = "damage";
 			intensityScaleFactor = 0.05f;
@@ -1816,8 +1926,8 @@ public:
 			scalingType = "attribute";
 			attributeScale = "strength";
 			itemType = "damage";
-			itemDamage = 10;
-			attributeScalingFactor = 0.20f;
+			itemDamage = 14;
+			attributeScalingFactor = 0.18f;
 
 			break;
 
@@ -1980,7 +2090,18 @@ public:
 			intensityChange = 0;
 			itemCost = 10;
 			break;
-
+		case 23:
+			itemName = "Holy Egg";
+			itemDamage = 3;
+			itemQuantity = 1;
+			scalingType = "attribute";
+			itemType = "damage";
+			statusEffectIdGiven = 5;
+			attributeScalingFactor = 0.43f;
+			attributeScale = "dexterity";
+			intensityChange = 0;
+			itemCost = 8;
+			break;
 		default:
 
 			std::cout << "Hello, the item you're trying to access doesn't exist! oops!";
@@ -2405,7 +2526,7 @@ private:
 	bool spellsGenerated = false;
 	bool doneShopping = false;
 	bool shopUpgraded = false;
-	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 };
+	std::vector<char> availableSpells = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 , 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 };
 	std::vector<char> spellsInShop;
 
 public:
@@ -2554,7 +2675,7 @@ public:
 
 		for (int i = 1; i <= objectsAvailable; i++) {
 
-			int randomItemId = rand() % 23; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
+			int randomItemId = rand() % 24; //generates a random item that has to be updated manually in accordance with total items in game, think about making an unordered map
 			//bool isPair = (rand() % 100 < 20);
 			if (!itemsGenerated) itemsInShop.push_back(randomItemId); // places it into the shop item vector
 
@@ -2766,7 +2887,7 @@ public:
 				itemManaged = true;
 				break;
 			case 2: {
-				int recycleCost = (5 + recycleCount * 2) - bonusRecycle;
+				int recycleCost = (3 + recycleCount * 2) - bonusRecycle;
 				if (recycleCount < maxRecycleCount) {
 					if (player.gold >= recycleCost) {
 						player.gold -= recycleCost;
@@ -2787,7 +2908,7 @@ public:
 				}
 				else
 				{
-					std::cout << "\nYou've already recycled twice this visit!";
+					std::cout << "\nYou've already recycled enough this visit!";
 					itemManaged = true;
 					break;
 				}
@@ -2821,7 +2942,7 @@ public:
 		while (!containerFilled) {
 			std::cout << "\nWhat would you like to fill your container with?\n"
 				<< "\n1)Soup ( 3g )"
-				<< "\n2)Strength Potion ( 8g )"
+				<< "\n2)Strength Potion ( 6g )"
 				<< "\n3)Regeneration Potion ( 4g )\n";
 
 			std::cin >> refillChoice;
@@ -2850,8 +2971,8 @@ public:
 				break;
 
 			case 2:
-				if (player.gold >= 8) {
-					player.gold -= 8;
+				if (player.gold >= 6) {
+					player.gold -= 6;
 					std::cout << "\nYou refil your " << shopItem.itemName;
 					shopItem.itemsHeld.push_back(20);
 					shopItem.updateItem(20);
@@ -3270,8 +3391,10 @@ public:
 					std::cout << "\n" << opponent.name << ": " << drawHealthBar(opponent.enemyHealth, opponent.enemyMaxHealth)
 					<< " " << opponent.enemyHealth << "/" << opponent.enemyMaxHealth
 					<< " | Atk: " << opponent.enemyDisplayDamage(player, 0.9) << " - " << opponent.enemyDisplayDamage(player, 1.1) << "\n";
-				std::cout << "You: " << drawHealthBar(player.playerHealth, player.playerMaxHealth)
-					<< " " << player.playerHealth << "/" << player.playerMaxHealth << "\n"
+					std::cout << "You: " << drawHealthBar(player.playerHealth, player.playerMaxHealth)
+						<< " " << player.playerHealth << "/" << player.playerMaxHealth << "\n";
+					status.displayPlayerStatuses();
+				std::cout
 				<< std::endl << "1) Attack" << " | Damage: " << player.calculateMeleeDamage(opponent.defense)
 				<< std::endl << "2) Defend"
 				<< std::endl << "3) Spells (" << player.spellsAvailable << "/" << player.maximumSpellsAvailable << ")"
@@ -3646,6 +3769,7 @@ void pickSpeciality(character& player, spells& spell) {
 			case 2: // items
 				bonusItemDamage = 2;
 				bonusFreeItemTurnChance = 5;
+				bonusRecycle += 1;
 				player.grantGold(10);
 				playerSpeciality = "Items";
 				specialityPicked = true;
