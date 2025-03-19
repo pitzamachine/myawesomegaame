@@ -100,9 +100,9 @@ const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 	{"Little Golem", {40, 10, 6, 8, 30, '1', 1}},
 	{"Soul Sucker",{75, 8, 10, 16, 60, '2', 4}},
 	{"Living Armor", {90, 14, 6, 20, 100,'1', 5}},	
-	{"Fear Monger", {100,12,12,25, 150,'3', 6}},
+	{"Fear Monger", {100,12,12,25, 150,'2', 6}},
 	{ "The Grand Crow", {120,10,10,30, 150,'4', 7}},
-	{ "Fat Dragon", {195,25,25,70, 250,'4', 9}},
+	{ "Fat Dragon", {195,25,25,70, 250,'3', 9}},
 	{ "Penultimate Knight", {230,34,22,90, 350,'3', 10}}
 };
 
@@ -790,7 +790,7 @@ public:
 			newEffect.statusId = '6';
 			newEffect.type = 'h';
 			newEffect.strengthValue = 2;
-			newEffect.duration = 6 + bonusStatusDuration;
+			newEffect.duration = 6;
 			newEffect.buffTarget = '-1';
 			break;
 		case 7:
@@ -799,7 +799,7 @@ public:
 			newEffect.shortenedName = "Def. Stance";
 			newEffect.statusId = '7';
 			newEffect.type = 'b';
-			newEffect.strengthValue = 5 + bonusDefense;
+			newEffect.strengthValue = 7 + bonusDefense;
 			newEffect.duration = 3 + bonusDefensiveStanceDuration + bonusStatusDuration;
 			newEffect.buffTarget = '6';
 			break;
@@ -849,7 +849,7 @@ public:
 			newEffect.shortenedName = "Prot. Aura";
 			newEffect.statusId = '12';
 			newEffect.type = 'b';
-			newEffect.strengthValue = 2 + bonusDefense;
+			newEffect.strengthValue = 5 + bonusDefense;
 			newEffect.duration = 8 + bonusStatusDuration;
 			newEffect.buffTarget = '-1';
 			break;
@@ -860,6 +860,11 @@ public:
 		}
 	
 		if (onPlayer) {
+			if (newEffect.type == 'h') {
+				newEffect.duration += bonusStatusDuration;
+			
+			}
+
 			playerStatuses.push_back(newEffect);
 		}
 		else {
@@ -989,6 +994,11 @@ public:
 
 				}
 				else {
+					if (it->type == 'h') {
+						opponent.enemyHealth += it->strengthValue;
+						std::cout << "Enemy gained " << it->strengthValue << " HP due to " << it->actionName << std::endl;
+						it->duration--;
+					}
 					if (it->type == 'd') {
 						opponent.takeDamage(it->strengthValue);
 						std::cout << "Enemy lost " << "HP due to " << it->actionName << std::endl;
@@ -1059,10 +1069,10 @@ void basicEnemyAi(character& player, enemy& opponent) {
 			std::cout << "\nThe enemy turns up the heat! Intensity + 3\n";
 			intensity += 3;
 			turnsElapsed++;
-			//do nothing
+			
 			break;
 		case 3:
-			std::cout << "\nEnemy does nothing.\n";
+			std::cout << "\nEnemy doddles..\n";
 			//also do nothing
 			turnsElapsed++;
 			break;
@@ -1088,7 +1098,7 @@ void poisonerEnemyAi(character& player, statuseffects& status, enemy& opponent) 
 			//defend
 			std::cout << "\nEnemy defends, you'll do less melee damage\n";
 			opponent.enemysetTempDefense(opponent.enemyGetDefense());
-			opponent.enemySetDefense(opponent.enemyGetDefense() * 1.5);
+			opponent.enemySetDefense(opponent.enemyGetDefense() * 1.4);
 			turnsElapsed++;
 			break;
 		case 2:
@@ -1118,6 +1128,51 @@ void poisonerEnemyAi(character& player, statuseffects& status, enemy& opponent) 
 
 }
 
+void tankyEnemyAi(character& player, statuseffects& status, enemy& opponent) {
+	if (battling) {
+		diceRoll = rand() % 4;
+		setColor(13);
+		switch (diceRoll) {
+
+		case 0: {
+
+			player.takeDamage(opponent.enemyCalculateMeleeDamage(player));
+			turnsElapsed++;
+			break;
+		}
+		case 1:
+			//defend
+			std::cout << "\nEnemy defends, you'll do less melee damage\n";
+			opponent.enemysetTempDefense(opponent.enemyGetDefense());
+			opponent.enemySetDefense(opponent.enemyGetDefense() * 2.5);
+			turnsElapsed++;
+			break;
+		case 2:
+			std::cout << "\nThe enemy turns up the heat! Intensity + 1\n";
+			intensity += 1;
+			turnsElapsed++;
+			//do nothing
+			break;
+		case 3: {
+			std::cout << "\nEnemy tries to heal itself...\n";
+
+			int healChance = 65 + player.level;
+
+			if (healChance > rand() % 100) {
+
+				std::cout << "\nEnemy starts regenerating health!\n";
+				status.grantStatusEffect(player, opponent, false, 6);
+			}
+
+			turnsElapsed++;
+			break;
+		}
+
+		}
+		setColor(7);
+	}
+
+}
 class spells {
 
 public:
@@ -3352,10 +3407,27 @@ public:
 		randomHealth *= zones.getDifficultyAmplifier();
 		randomXP = (randomHealth + randomAttack + randomDefense)/1.5;
 		randomXP *= zones.getExpAmplifier();
-		randomGold = (rand() % 8 + player.luck / 3) + player.level * 3 + randomXP/16 ;
+		randomGold = (rand() % 8 + player.luck / 3) + player.level * 3 + randomXP/17 ;
 		randomGold *= zones.getGoldAmplifier();
 		randomName = "Crowbob " + std::to_string(rand() % 200);
-		randomAI = '1' + rand() % 2;
+		randomAI = '1' + rand() % 3;
+
+		switch (randomAI) {
+
+		case '2': // poisoner
+
+			randomHealth *= 7 / 9;
+			randomAttack *= 8 / 9;
+			break;
+		case '3': // tanky
+
+			randomHealth *= 9 / 7;
+			randomAttack *= 7 / 9;
+			break;
+		default:
+			break;
+
+		}
 
 		
 		randomAttack *= zones.getDifficultyAmplifier();
@@ -3556,6 +3628,10 @@ public:
 					case '2':
 						poisonerEnemyAi(player, status, opponent);
 						break;
+					case '3':
+						tankyEnemyAi(player, status, opponent);
+						break;
+
 					default:
 						basicEnemyAi(player, opponent);
 						break;
