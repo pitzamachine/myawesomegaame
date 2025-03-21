@@ -108,6 +108,8 @@ struct godInfo {
 
 };
 
+std::vector<godInfo> gods;
+
 const std::unordered_map<std::string, EnemyStats> EnemyStatsMap = {
 
 	{"Snow Golem", {50, 12, 6, 10, 30, '1', 2}},
@@ -3711,8 +3713,42 @@ public:
 
 	unsigned short shrinesEncountered = 0;
 
-	void assignGodBonuses() {
+	void assignGodBonuses(std::vector<godInfo>& gods) {
 
+		std::vector<char> bonusPool = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
+
+		std::random_shuffle(bonusPool.begin(), bonusPool.end());
+
+		gods.clear();
+
+		for (int i = 0; i < 5; i++) {
+			godInfo newGod;
+			newGod.nameOfGod = godNames[i];
+			newGod.reputation = 0;
+
+		
+			int index = i * 3;  
+			newGod.bonus1 = bonusPool[index];
+			newGod.bonus2 = bonusPool[index + 1];
+			newGod.bonus3 = bonusPool[index + 2];
+
+			gods.push_back(newGod);
+		}
+
+	}
+
+	void displayPrayerOptions() {
+
+		bool donePraying = false;
+
+		while (!donePraying) {
+
+
+
+
+
+
+			}
 
 
 
@@ -3726,7 +3762,8 @@ public:
 		bool willPray = false;
 		bool prayed = false;
 
-		std::string selectedGod = godNames[rand() % 5];
+		int godIndex = rand() % gods.size();
+		std::string selectedGod = gods[godIndex].nameOfGod;
 
 		while (!willPray) {
 
