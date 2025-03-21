@@ -32,6 +32,7 @@ unsigned short totalRounds = 0;
 //bonus stats
 unsigned short bonusHealth = 0;
 unsigned short bonusDefense = 0;
+unsigned short bonusHealing = 0;
 unsigned short bonusIntensity = 0;
 unsigned short bonusCritChance = 0;
 unsigned short bonusMeleeDamage = 0;
@@ -44,6 +45,9 @@ unsigned short bonusLifeSteal = 0;
 unsigned short bonusDefensiveStanceDuration = 0;
 unsigned short bonusStatusDuration = 0;
 unsigned short bonusStatusApplyChance = 0;
+
+std::string godNames[5] = { "Toorumpicea", "Faahcist", "Aicanceyu" , "Keilraecyst" , "Blaliveckmat" };
+
 std::string playerSpeciality = "fuck";
 
 void startMenu() {
@@ -91,6 +95,16 @@ struct EnemyStats {
 	unsigned short exp;
 	char aiType;
 	unsigned short minLevel = 0;
+
+};
+
+struct godInfo {
+
+	std::string nameOfGod;
+	char bonus1;
+	char bonus2;
+	char bonus3;
+	short reputation;
 
 };
 
@@ -578,9 +592,6 @@ public:
 
 
 	}
-
-
-
 	bool criticalCalculator() {
 
 		double critChance = 3 + luck + faith / 3 + dexterity/4 + bonusCritChance;  // determine crit chance
@@ -590,6 +601,13 @@ public:
 		std::cout << std::endl << "Roll: " << rolledNumber << "(<" << critChance << " needed) \n";
 		return criticalHit;
 	}
+	void heal(int healAmount) {
+
+		playerHealth += healAmount;
+		std::cout << "\nYou heal for " << healAmount << "hit points!";
+
+	}
+
 
 	friend class combatHandler;
 	friend class spells;
@@ -799,7 +817,7 @@ public:
 			newEffect.shortenedName = "Def. Stance";
 			newEffect.statusId = '7';
 			newEffect.type = 'b';
-			newEffect.strengthValue = 5 + bonusDefense;
+			newEffect.strengthValue = 7 + bonusDefense;
 			newEffect.duration = 3 + bonusDefensiveStanceDuration + bonusStatusDuration;
 			newEffect.buffTarget = '6';
 			break;
@@ -829,7 +847,7 @@ public:
 			newEffect.shortenedName = "OVERLOAD!";
 			newEffect.statusId = '10';
 			newEffect.type = 'b';
-			newEffect.strengthValue = 18;
+			newEffect.strengthValue = 20;
 			newEffect.duration = 2 + bonusStatusDuration;
 			newEffect.buffTarget = '1';
 			break;
@@ -839,7 +857,7 @@ public:
 			newEffect.shortenedName = "Poison";
 			newEffect.statusId = '11';
 			newEffect.type = 'd';
-			newEffect.strengthValue = 2;
+			newEffect.strengthValue = 2 + player.faith/6;
 			newEffect.duration = 8;
 			newEffect.buffTarget = '-1';
 			break;
@@ -849,11 +867,20 @@ public:
 			newEffect.shortenedName = "Prot. Aura";
 			newEffect.statusId = '12';
 			newEffect.type = 'b';
-			newEffect.strengthValue = 2 + bonusDefense;
+			newEffect.strengthValue = 4 + bonusDefense;
 			newEffect.duration = 8 + bonusStatusDuration;
 			newEffect.buffTarget = '-1';
 			break;
-
+		case 13:
+			newEffect.name = "Weakened";
+			newEffect.actionName = "Weakening";
+			newEffect.shortenedName = "Weakened";
+			newEffect.statusId = '13';
+			newEffect.type = 'f';
+			newEffect.strengthValue = -6;
+			newEffect.duration = 3;
+			newEffect.buffTarget = '6';
+			break;
 
 		default:
 			break;
@@ -964,6 +991,15 @@ public:
 					if (it->type == 'b') {
 						if (!it->buffApplied) {
 							std::cout << "\nApplying buff: " << it->name;
+							changeBuffedStat(it->strengthValue, it->buffTarget);
+							it->buffApplied = true;
+						}
+						
+						it->duration--;
+					}
+					if (it->type == 'f') {
+						if (!it->buffApplied) {
+							std::cout << "\nApplying debuff: " << it->name;
 							changeBuffedStat(it->strengthValue, it->buffTarget);
 							it->buffApplied = true;
 						}
@@ -3591,6 +3627,74 @@ public:
 			
 	};
 
+class shrine {
+
+private:
+
+public:
+
+	unsigned short shrinesEncountered = 0;
+
+	void assignGodBonuses() {
+
+
+
+
+
+	}
+
+
+	void findShrine() {
+
+		unsigned short shrineInput = 0;
+		bool willPray = false;
+		bool prayed = false;
+
+		std::string selectedGod = godNames[rand() % 5];
+
+		while (!willPray) {
+
+			std::cout << "\nYou stumble apon a shrine of the god " << selectedGod << ". Will you make an offering?"
+				<< "\n1) Yes." << "\n2) I'm an atheist.";
+
+			std::cin >> shrineInput;
+
+			if (handleInputFailure("\nInput 1 or 2") || shrineInput > 2 || shrineInput < 1) {
+
+				continue;
+			}
+
+			switch (shrineInput) {
+
+			case 1:
+				willPray = true;
+				break;
+			case 2:
+				willPray = false;
+				std::cout << "\nFilthy heathen.."
+					<< "\nPress enter to continue..";
+				std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+				std::cin.get();
+				break;
+			default:
+
+				break;
+
+			}
+			
+		}
+		if (willPray) {
+			while (!prayed) {
+
+
+
+
+			}
+		}
+
+	}
+
+};
 
 void startingBonus(character& player, items& item, spells& spell) {
 
@@ -3715,7 +3819,6 @@ void startingBonus(character& player, items& item, spells& spell) {
 			std::cout << "\nYou have a deepened understanding of wellbeing.";
 		}
 	}
-
 void pickName(character& player) {
 
 	std::string newName = "";
@@ -3802,7 +3905,29 @@ void pickSpeciality(character& player, spells& spell) {
 		}
 		
 	}
+void doSpecialEvent(items& item) {
 
+	char randomEvent = rand() % 10;
+
+	switch (randomEvent) {
+
+	case 1:
+
+		break;
+	case 2:
+		
+		break;
+
+	case 3:
+
+		break;
+	default:
+		
+		break;
+
+	}
+
+}
 
 
 int main() {
@@ -3833,7 +3958,7 @@ int main() {
 
 
 	beforeStarting();
-	//clear();
+
 
 	startingBonus(test1, testitem, spelltest);
 	test.enemySet(20, 20, 1, 4, 10, 20, '1', "beebie", test1);
