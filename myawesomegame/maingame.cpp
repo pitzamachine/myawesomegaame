@@ -25,7 +25,7 @@ int diceRoll;
 int enemyRoll;
 int turnsElapsed = 0;
 unsigned short roundsPassed = 0;
-unsigned short roundsNeeded = 2;
+unsigned short roundsNeeded = 3;
 unsigned short totalRounds = 0;
 
 
@@ -133,9 +133,9 @@ bool handleInputFailure(const std::string& errorMessage) {
 		std::cout << errorMessage << std::endl;
 		std::cin.clear();
 		std::cin.ignore(10000, '\n');
-		return true; // Indicates failure occurred
+		return true; // fail
 	}
-	return false; // No failure
+	return false; // no fail
 }
 
 void setColor(int color) {
@@ -143,15 +143,15 @@ void setColor(int color) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 #else
 	switch (color) {
-	case 3: std::cout << "\033[36m"; break; // Cyan
-	case 4: std::cout << "\033[31m"; break; // Red
-	case 6: std::cout << "\033[33m"; break; // Yellow
-	case 7: std::cout << "\033[0m"; break;  // Reset
-	case 10: std::cout << "\033[32m"; break; // Green
-	case 12: std::cout << "\033[91m"; break; // Bright Red
-	case 13: std::cout << "\033[95m"; break; // Bright Magenta
-	case 14: std::cout << "\033[93m"; break; // Bright Yellow
-	case 15: std::cout << "\033[97m"; break; // Bright White
+	case 3: std::cout << "\033[36m"; break; // cyan
+	case 4: std::cout << "\033[31m"; break; // red
+	case 6: std::cout << "\033[33m"; break; // yellow
+	case 7: std::cout << "\033[0m"; break;  // reset
+	case 10: std::cout << "\033[32m"; break; // green
+	case 12: std::cout << "\033[91m"; break; // bright Red
+	case 13: std::cout << "\033[95m"; break; // bright Magenta
+	case 14: std::cout << "\033[93m"; break; // bright Yellow
+	case 15: std::cout << "\033[97m"; break; // bright White
 	default: std::cout << "\033[0m"; break;
 	}
 #endif
@@ -188,6 +188,50 @@ void generateRandomTip() {
 	setColor(7);
 }
 
+void displayAttributeHelp() {
+
+	std::cout << "\n--- Attributes ---\n";
+	std::cout << "\nEndurance: increases HP and defense primarily, but also affects the healing from some spells."
+		<< "\nStrength: Increases melee damage and minimum melee damage, as well as defense slighty. "
+		<< "\nDexterity: increases damage from daggers primarily, your odds at fleeing battles, and your critical chance."
+		<< "\nWisdom: increases how many spell slots you have, and the damage dealt from wisdom based spells."
+		<< "\nLuck: influences many things, such as the chance to flee or get another turn when using an item. It's not bad to have"
+		<< "\nFaith: primarily increases the damage and healing from faith spells, it also increases your spell slots, but at a slower rate.";
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	std::cin.get();
+}
+
+void displaySpecialityHelp() {
+	std::cout << "\n--- Specialities ---\n";
+	std::cout << "\nMagic speciality grants you a spell slot, and slightly bumps magic damage"
+		<< "\nItems speciality grants you increased item damage, some gold, and a higher chance to get a free action with items"
+		<< "\nMelee speciality grants you a slight buff to defense, melee damage, crit chance, and a slight life steal on hit"
+		<< "\nDefense speciality grants you a generous boost to defense and max health, and increases the eficacy of defending in combat."
+		<< "\nControl speciality increases the duration of beneficial status effects by 1 turn, and increases the odds of inflicting a status by 10%";
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	std::cin.get();
+}
+
+void displayGameplayHelp() {
+
+	std::cout << "\n--- Gameplay ---";
+	std::cout << "\n-Intensity: Intensity increases almost all types of damage dealt, and taken."
+		<< "\nIf intensity rises too far, enemies can start to get very strong, though, you can aswell."
+		<< "\nIt's usually wiser to kill enemies before things get out of hand, as your fleeing odds decrease"
+		<< "\nas intensity rises. Gold dropped will also decrease as intensity rises, though, not dramatically.\n"
+		<< "\n-Zones: Zones apply random multipliers to difficulty, gold dropped, and experience dropped from enemies."
+		<< "\nThe 6th battle in every zone is a miniboss, and you are warned about them in the shop beforehand."
+		<< "\nCurrently, they don't do anything apart from that, but are a neat way to track progress.\n"
+		<< "\n-Shops: Shops allow you to buy items, healing, and spells, which are needed to survive."
+		<< "\nThe shop can be upgraded 4 times, increasing its variety and reducing the cost of refreshing it.\n"
+		<< "\n-Combat: Combat is turn-based, you will always take the first turn, and the enemy always second."
+		<< "\nEvery action takes a turn, except for looking through your spells, items, or checking stats."
+		<< "\nCombat against minibosses is the same as for normal enemies, except fleeing is much more difficult,"
+		<< "\nbut not impossible.\n";
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	std::cin.get();
+}
+
 void encyclopedia() {
 	outEncyclopedia = false;
 	while (!outEncyclopedia) {
@@ -215,26 +259,13 @@ void encyclopedia() {
 
 		case 1:
 			outEncyclopedia = false;
-			std::cout << "\n--- Attributes ---\n";
-			std::cout << "\nEndurance increases HP and defense primarily, but also affects the healing from some spells."
-				<< "\nStrength: Increases melee damage and minimum melee damage, as well as defense slighty. "
-				<< "\nDexterity increases damage from daggers primarily, your odds at fleeing battles, and your critical chance."
-				<< "\nWisdom increases how many spell slots you have, and the damage dealt from wisdom based spells."
-				<< "\nLuck influences many things, such as the chance to flee or get another turn when using an item. It's not bad to have"
-				<< "\nFaith primarily increases the damage and healing from faith spells, it also increases your spell slots, but at a slower rate.";
-			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			std::cin.get();
+			displayAttributeHelp();
+			
 			break;
 		case 2:
 			outEncyclopedia = false;
-			std::cout << "\n--- Specialities ---\n";
-			std::cout << "\nMagic speciality grants you a spell slot, and slightly bumps magic damage"
-				<<"\nItems speciality grants you increased item damage, some gold, and a higher chance to get a free action with items"
-				<<"\nMelee speciality grants you a slight buff to defense, melee damage, crit chance, and a slight life steal on hit"
-				<<"\nDefense speciality grants you a generous boost to defense and max health, and increases the eficacy of defending in combat."
-				<<"\nControl speciality increases the duration of beneficial status effects by 1, and increases the odds of inflicting a status by 10%";
-			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			std::cin.get();
+			displaySpecialityHelp();
+			
 			break;
 
 		case 3:
@@ -244,21 +275,8 @@ void encyclopedia() {
 			break;
 
 		case 4:
-			std::cout << "\n--- Gameplay ---";
-			std::cout << "\n-Intensity: Intensity increases almost all types of damage dealt, and taken."
-				<< "\nIf intensity rises too far, enemies can start to get very strong, though, you can aswell."
-				<< "\nIt's usually wiser to kill enemies before things get out of hand, as your fleeing odds decrease"
-				<< "\nas intensity rises. Gold dropped will also decrease as intensity rises, though, not dramatically.\n"
-				<< "\n-Zones: Zones apply random multipliers to difficulty, gold dropped, and experience dropped from enemies."
-				<< "\nThe 6th battle in every zone is a miniboss, and you are warned about them in the shop beforehand."
-				<< "\nCurrently, they don't do anything apart from that, but are a neat way to track progress.\n"
-				<< "\n-Shops: Shops allow you to buy items, healing, and spells, which are needed to survive."
-				<< "\nThe shop can be upgraded 4 times, increasing its variety and reducing the cost of refreshing it.\n"
-				<< "\n-Combat: Combat is turn-based, you will always take the first turn, and the enemy always second."
-				<< "\nEvery action takes a turn, except for looking through your spells, items, or checking stats."
-				<< "\nCombat against minibosses is the same as for normal enemies, except fleeing is much more difficult,"
-				<< "\nbut not impossible.\n";
-			
+		
+			displayGameplayHelp();
 			break;
 
 		
@@ -406,6 +424,10 @@ public:
 	int getStrength() {
 		return strength;
 	}
+	int getGold() {
+
+		return gold;
+	}
 
 	void grantGold(int amount) {
 		gold += amount;
@@ -425,14 +447,17 @@ public:
 	void pickAttributes() {
 		int attributeAssigner = 0;
 		int pointsToAssign = 0;
+	
 		while (attributePoints > 0) {
+			
 			std::cout << "Distribute your attribute points by typing 1 through 6, you have " << attributePoints << " left \n";
 			std::cout << "1) Endurance: " << endurance << std::endl
 				<< "2) Strength: " << strength << std::endl
 				<< "3) Dexterity: " << dexterity << std::endl
 				<< "4) Wisdom: " << wisdom << std::endl
 				<< "5) Luck: " << luck << std::endl
-				<< "6) Faith: " << faith << std::endl;
+				<< "6) Faith: " << faith << std::endl
+				<< "-----\n7)Help\n";
 
 
 			std::cin >> attributeAssigner;
@@ -440,18 +465,21 @@ public:
 			if (handleInputFailure("\nInvalid input! Please enter a valid number between 1 and 6.")) {
 				continue;
 			}
-			if (attributeAssigner < 1 || attributeAssigner > 6) {
+			if (attributeAssigner < 1 || attributeAssigner > 7) {
 				std::cout << "Number out of range, try again.\n";
 				continue;
 			}
+			if (attributeAssigner != 7) {
+				std::cout << "How many points would you like to assign? (Remaining: " << attributePoints << ")\n";
+				std::cin >> pointsToAssign;
+			}
 
-			std::cout << "How many points would you like to assign? (Remaining: " << attributePoints << ")\n";
-			std::cin >> pointsToAssign;
+			
 
 			if (handleInputFailure("\nInvalid input! Please enter a valid number.")) {
 				continue;
 			}
-			if (attributePoints < pointsToAssign || pointsToAssign <= 0) {
+			if (attributePoints < pointsToAssign || pointsToAssign <= 0 && attributeAssigner != 7) {
 				std::cout << "You can't assign that many points.\n";
 				continue;
 			}
@@ -462,12 +490,14 @@ public:
 
 				endurance += pointsToAssign;
 				attributePoints -= pointsToAssign;
+				clear();
 				std::cout << pointsToAssign << " points assigned to Endurance. New value: " << endurance << "\n";
 				break;
 			}
 			case 2:
 				strength += pointsToAssign;
 				attributePoints -= pointsToAssign;
+				clear();
 				std::cout << pointsToAssign << " points assigned to Strength. New value: " << strength << "\n";
 
 				break;
@@ -475,6 +505,7 @@ public:
 			{
 				dexterity += pointsToAssign;
 				attributePoints -= pointsToAssign;
+				clear();
 				std::cout << pointsToAssign << " points assigned to dexterity. New value: " << dexterity << "\n";
 
 
@@ -484,6 +515,7 @@ public:
 			{
 				wisdom += pointsToAssign;
 				attributePoints -= pointsToAssign;
+				clear();
 				std::cout << pointsToAssign << " points assigned to wisdom. New value: " << wisdom << "\n";
 
 				break;
@@ -491,6 +523,7 @@ public:
 			case 5:
 				luck += pointsToAssign;
 				attributePoints -= pointsToAssign;
+				clear();
 				std::cout << pointsToAssign << " points assigned to Luck. New value: " << luck << "\n";
 
 				break;
@@ -498,8 +531,14 @@ public:
 
 				faith += pointsToAssign;
 				attributePoints -= pointsToAssign;
+				clear();
 				std::cout << pointsToAssign << " points assigned to Faith. New value: " << faith << "\n";
 				break;
+			case 7:
+				displayAttributeHelp();
+				clear();
+				break;
+
 			default:
 				std::cout << "Number out of range, try again \n";
 				break;
@@ -524,9 +563,18 @@ public:
 		maximumSpellsAvailable = (faith / 4.5f + wisdom / 2.7f) + bonusSpellSlots; // adds up the 3 variables and rounds down
 		spellsAvailable = maximumSpellsAvailable;
 	}
+	void updateStatsNoRefill() {
+		playerMaxHealth = 12 + bonusHealth + 3 * (level - 1) + endurance * 3;
+		defense = 1 + endurance * 2 + strength * 1 + (level * 0.5) + bonusDefense;
+		temporaryDefense = defense;
+		magicDefense = faith * 3 + wisdom * 1 + luck * 1;
+		maximumSpellsAvailable = (faith / 4.5f + wisdom / 2.7f) + bonusSpellSlots; // adds up the 3 variables and rounds down
+
+
+	};
 	void updateMaxHealth() {
 
-		playerMaxHealth = 10 + bonusHealth + 3 * (level - 1) + endurance * 3;
+		playerMaxHealth = 12 + bonusHealth + 3 * (level - 1) + endurance * 3;
 
 	}
 	void takeDamage(int damage) {
@@ -871,7 +919,7 @@ public:
 			newEffect.type = 'b';
 			newEffect.strengthValue = 5 + bonusDefense;
 			newEffect.duration = 8 + bonusStatusDuration;
-			newEffect.buffTarget = '-1';
+			newEffect.buffTarget = '6';
 			break;
 		case 13:
 			newEffect.name = "Weakened";
@@ -1194,7 +1242,7 @@ void tankyEnemyAi(character& player, statuseffects& status, enemy& opponent) {
 		case 3: {
 			std::cout << "\nEnemy tries to heal itself...\n";
 
-			int healChance = 65 + player.level;
+			int healChance = 15 + player.level * 3;
 
 			if (healChance > rand() % 100) {
 
@@ -1211,6 +1259,7 @@ void tankyEnemyAi(character& player, statuseffects& status, enemy& opponent) {
 	}
 
 }
+
 class spells {
 
 public:
@@ -1834,6 +1883,13 @@ private:
 	int input = 0;
 
 public:
+
+	std::string getName() {
+
+		return itemName;
+
+	}
+
 	statuseffects& status;
 
 	items(statuseffects& st) : status(st) {}
@@ -2574,9 +2630,9 @@ public:
 		return zoneName;
 	}
 
-	void zoneChecker(int roundsCounter) {
+	bool zoneChecker(int roundsCounter) {
 
-		if (roundsCounter % 10 == 0 && roundsCounter > 0) {
+		if (roundsCounter % 12 == 0 && roundsCounter > 0) {
 		
 			totalRounds = 0;
 			addClearedZone(zoneName);
@@ -2587,6 +2643,7 @@ public:
 			player.grantExp(bonusXP);
 			generateZone();
 			chooseZone();
+			return true;
 		}
 
 	}
@@ -2596,7 +2653,7 @@ public:
 			<< " | Diff: " << std::fixed << std::setprecision(2) << zoneDifficultyAmplifier
 			<< " | Gold: " << zoneGoldAmplifier
 			<< " | XP: " << zoneExperienceAmplifier 
-			<< " | Zone Progress: " << totalRounds << "/ 10" << "\n\n";
+			<< " | Zone Progress: " << totalRounds << "/ 12" << "\n\n";
 
 
 	}
@@ -2816,6 +2873,7 @@ public:
 	}
 
 	void leaveShop() {
+		clear();
 		std::cout << "\nBye-bye!\n";
 		recycleCount = 0;
 		doneShopping = true;
@@ -3165,14 +3223,22 @@ public:
 
 	void shopMenu() {
 
+		clear();
 		int shopChoice;
 		doneShopping = false;
+		int healPrice = ((player.playerMaxHealth - player.playerHealth) / 3 + 4 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level * 0.8);
 		player.temporarySpellSlots = 0; //reset temp spell slots, they only last 2 battles.
 		setColor(4);
-		std::cout << "--Welcome to the shop!--\n";
+		std::cout << "--Welcome to the shop!--\n"
+			<< "\nPress enter to enter!";
+		
+		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		std::cin.get();
 		setColor(7);
 		while (!doneShopping && player.playerHealth > 0) {
-			int healPrice = ((player.playerMaxHealth - player.playerHealth) / 3 + 4 * (player.maximumSpellsAvailable - player.spellsAvailable)) * (player.level * 0.8);
+
+	
+			
 			if (totalRounds == 6) {
 				std::cout << "\n--Difficult foe ahead!--\n";
 			}
@@ -3188,6 +3254,7 @@ public:
 			std::cin >> shopChoice;
 
 			if (handleInputFailure("\nInvalid input! Input a number 1-3\n")) {
+				clear();
 				continue;
 
 			}
@@ -3201,6 +3268,7 @@ public:
 					<< "3) Healer\n";
 					
 				std::cin >> shopChoice;
+			
 				if (handleInputFailure("Choose 1-3.\n")) continue;
 				switch (shopChoice) {
 				case 1: itemShopMenu(shopItem); break;
@@ -3216,6 +3284,7 @@ public:
 					<< "4) Upgrade Shop\n";
                               
                     std::cin >> shopChoice;
+				
                     if (handleInputFailure("Choose 1-3.\n")) continue;
 					switch (shopChoice) {
 					case 1: itemManage(); break;
@@ -3239,6 +3308,7 @@ public:
 					<< "1) View Map\n"
 					<< "2) Leave Shop\n";
 				std::cin >> shopChoice;
+			
 				if (handleInputFailure("Choose 1-2.\n")) continue;
 				switch (shopChoice) {
 				case 1: zones.checkMap(); break;
@@ -3280,7 +3350,7 @@ private:
 public:
 	
 	combatHandler(character& p, enemy& e, spells& s, items& i, shop& sh, statuseffects& st, zoneHandler& zh) : player(p), opponent(e), spell(s), item(i), shops(sh), status(st), zones(zh)  {
-		std::cout << std::endl << "BATTLE START!" << std::endl;
+		
 	};
 	void battleRewards() {
 		if (!battling && opponent.enemyHealth <= 0) {
@@ -3291,6 +3361,10 @@ public:
 			setColor(6);
 			std::cout << "\nYou gained " << opponent.goldDropped << " + ("<< (finalGold-opponent.goldDropped) <<" due to intensity)" <<" gold and " << opponent.experienceWorth << " experience!\n";
 			setColor(7);
+			std::cout << "\nPress enter to continue.";
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			std::cin.get();
+			clear();
 			if (player.getDexterity() >= 10) {
 
 				rolledNumber = rand() % 5;
@@ -3439,8 +3513,8 @@ public:
 			}
 		}
 
-		randomHealth = rand() % (24 + player.level * 7) + 5;
-		randomAttack = rand() % (4 + player.level * 2) + 1;
+		randomHealth = rand() % (22 + player.level * 6) + 4;
+		randomAttack = rand() % (3 + player.level * 2) + 1;
 		randomDefense = rand() % (5 + player.level * 3) + 3;
 		randomHealth *= zones.getDifficultyAmplifier();
 		randomXP = (randomHealth + randomAttack + randomDefense)/1.5;
@@ -3454,13 +3528,13 @@ public:
 
 		case '2': // poisoner
 
-			randomHealth *= 7 / 9;
-			randomAttack *= 8 / 9;
+			randomHealth *= 0.75;
+			randomAttack *= 0.85;
 			break;
 		case '3': // tanky
 
-			randomHealth *= 9 / 7;
-			randomAttack *= 7 / 9;
+			randomHealth *= 1.2;
+			randomAttack *= 0.80;
 			break;
 		default:
 			break;
@@ -3526,9 +3600,9 @@ public:
 				continue;
 
 			}
-
+			clear();
 			switch (input) {
-
+				
 			case 1: {  //keep these brackets
 				
 				std::cout << "\nYou swing at the enemy... \n";
@@ -3646,7 +3720,7 @@ public:
 				turnsElapsed++;
 				break;
 			default:
-				std::cout << "number out of range, try again";
+				std::cout << "\nNumber out of range, try again\n";
 				break;
 
 			
@@ -3711,7 +3785,15 @@ private:
 
 public:
 
-	unsigned short shrinesEncountered = 0;
+	character& player;
+
+	shrine(character& p) : player(p) {
+
+
+
+	};
+
+	unsigned short zoneShrinesEncountered = 0;
 
 	void assignGodBonuses(std::vector<godInfo>& gods) {
 
@@ -3737,30 +3819,218 @@ public:
 
 	}
 
-	void displayPrayerOptions() {
+	bool displayPrayerOptions(std::vector<godInfo> gods, int godNumber) {
 
 		bool donePraying = false;
-
+		int prayerChoice;
+		unsigned short prayerCost = 25 - player.getFaith()/3;
 		while (!donePraying) {
 
+			std::cout << "\nMake an offering to your chosen god." << "\nYou have: " << player.getGold() << " Gold." << "\n"
+				<<"\nIt costs " << prayerCost << " gold to make an offering.";
 
+			std::cout << "\n1) "; bonusIdDisplayer(gods[godNumber].bonus1); std::cout << " | Current Value: "; bonusNumDisplayer(gods[godNumber].bonus1);
+			std::cout << "\n2) "; bonusIdDisplayer(gods[godNumber].bonus2); std::cout << " | Current Value: "; bonusNumDisplayer(gods[godNumber].bonus2);
+			std::cout << "\n3) "; bonusIdDisplayer(gods[godNumber].bonus3); std::cout << " | Current Value: "; bonusNumDisplayer(gods[godNumber].bonus3);
+			std::cout << "\n4) Finish Praying.\n";
 
+			std::cin >> prayerChoice;
 
-
-
+			if (handleInputFailure("") || prayerChoice < 1 || prayerChoice > 4) {
+				clear();
+				std::cout << "\nInput a number from 1 - 4";
+				continue;
 			}
 
 
+			if (player.getGold() >= prayerCost && prayerChoice != 4) {
 
+				switch (prayerChoice) {
+
+				case 1:
+					player.gold -= prayerCost;
+					applyGodBonus(gods[godNumber].bonus1, 1);
+					break;
+				case 2:
+					player.gold -= prayerCost;
+					applyGodBonus(gods[godNumber].bonus2, 1);
+					break;
+				case 3:
+					player.gold -= prayerCost;
+					applyGodBonus(gods[godNumber].bonus3, 1);
+					break;
+				default:
+
+					break;
+				}
+				gods[godNumber].reputation++;
+				player.updateStatsNoRefill();
+				std::cout << "\nOffering made.. an ethereal aura envelops you, your reputation with " << gods[godNumber].nameOfGod << " has improved.";
+
+			}
+			if (prayerChoice == 4) {
+
+				donePraying = true;
+				std::cout << "\nYou leave the shrine of " << gods[godNumber].nameOfGod << ".";
+				gods[godNumber].reputation++;
+				return true;
+			}
+
+		}
 
 	}
 
+	void bonusIdDisplayer(int bonusId) {
+
+		switch (bonusId) {
+		case 0: 
+			std::cout << "Bonus Health";
+			break;
+		case 1: 
+			std::cout << "Bonus Defense";
+			break;
+		case 2: 
+			std::cout << "Bonus Healing";
+			break;
+		case 3: 
+			std::cout << "Bonus Intensity";
+			break;
+		case 4: 
+			std::cout << "Bonus Critical Chance";
+			break;
+		case 5:
+			std::cout << "Bonus Melee Damage";
+			break;
+		case 6: 
+			std::cout << "Bonus Spell Damage";
+			break;
+		case 7: 
+			std::cout << "Bonus Recycling";
+			break;
+		case 8: 
+			std::cout << "Bonus Item Damage";
+			break;
+		case 9:
+			std::cout << "Bonus Item Turn Chance";
+			break;
+		case 10:
+			std::cout << "Bonus Spell Slots";
+			break;
+		case 11:
+			std::cout << "Bonus Life Steal";
+			break;
+		case 12: 
+			std::cout << "Bonus Defending Duration";
+			break;
+		case 13: 
+			std::cout << "Bonus Status Duration";
+			break;
+		case 14: 
+			std::cout << "Bonus Chance to apply status";
+			break;
+		default: 
+			std::cout << "Bonus Nothing! Nothing is free in life anyways.";
+			break; 
+			
+
+
+
+
+		}
+
+
+
+	};
+
+	void bonusNumDisplayer(int bonusId) {
+
+		switch (bonusId) {
+		case 0:
+			std::cout << bonusHealth;
+			break;
+		case 1:
+			std::cout << bonusDefense;
+			break;
+		case 2:
+			std::cout << bonusHealing;
+			break;
+		case 3:
+			std::cout << bonusIntensity;
+			break;
+		case 4:
+			std::cout << bonusCritChance;
+			break;
+		case 5:
+			std::cout << bonusMeleeDamage;
+			break;
+		case 6:
+			std::cout << bonusSpellDamage;
+			break;
+		case 7:
+			std::cout << bonusRecycle;
+			break;
+		case 8:
+			std::cout << bonusItemDamage;
+			break;
+		case 9:
+			std::cout << bonusFreeItemTurnChance;
+			break;
+		case 10:
+			std::cout << bonusSpellSlots;
+			break;
+		case 11:
+			std::cout << bonusLifeSteal;
+			break;
+		case 12:
+			std::cout << bonusDefensiveStanceDuration;
+			break;
+		case 13:
+			std::cout << bonusStatusDuration;
+			break;
+		case 14:
+			std::cout << bonusStatusApplyChance;
+			break;
+		default:
+			std::cout << "Bonus Nothing! Nothing is free in life anyways.";
+			break;
+
+
+
+
+
+		}
+
+
+
+	};
+
+	void applyGodBonus(int bonusId, int valueToAdd) {
+		switch (bonusId) {
+		case 0: bonusHealth += 3*valueToAdd; break;
+		case 1: bonusDefense += 2*valueToAdd; break;
+		case 2: bonusHealing += valueToAdd; break;
+		case 3: bonusIntensity += valueToAdd; break;
+		case 4: bonusCritChance += valueToAdd; break;
+		case 5: bonusMeleeDamage += valueToAdd; break;
+		case 6: bonusSpellDamage += valueToAdd; break;
+		case 7: bonusRecycle += valueToAdd; break;
+		case 8: bonusItemDamage += valueToAdd; break;
+		case 9: bonusFreeItemTurnChance += valueToAdd; break;
+		case 10: bonusSpellSlots += valueToAdd; break;
+		case 11: bonusLifeSteal += valueToAdd; break;
+		case 12: bonusDefensiveStanceDuration += valueToAdd; break;
+		case 13: bonusStatusDuration += valueToAdd; break;
+		case 14: bonusStatusApplyChance += 2*valueToAdd; break;
+		default: break;
+		}
+	}
 
 	void findShrine() {
 
+		zoneShrinesEncountered++;
 		unsigned short shrineInput = 0;
 		bool willPray = false;
-		bool prayed = false;
+		
 
 		int godIndex = rand() % gods.size();
 		std::string selectedGod = gods[godIndex].nameOfGod;
@@ -3768,7 +4038,7 @@ public:
 		while (!willPray) {
 
 			std::cout << "\nYou stumble apon a shrine of the god " << selectedGod << ". Will you make an offering?"
-				<< "\n1) Yes." << "\n2) I'm an atheist.";
+				<< "\n1) Yes." << "\n2) I'm an atheist.\n";
 
 			std::cin >> shrineInput;
 
@@ -3780,10 +4050,17 @@ public:
 			switch (shrineInput) {
 
 			case 1:
+
 				willPray = true;
+				displayPrayerOptions(gods, godIndex);
+				std::cout << "\nPress enter to continue..";
+				std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+				std::cin.get();
+				clear();
 				break;
 			case 2:
-				willPray = false;
+				
+				willPray = true;
 				std::cout << "\nFilthy heathen.."
 					<< "\nPress enter to continue..";
 				std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -3796,14 +4073,7 @@ public:
 			}
 			
 		}
-		if (willPray) {
-			while (!prayed) {
-
-
-
-
-			}
-		}
+		
 
 	}
 
@@ -3962,14 +4232,15 @@ void pickSpeciality(character& player, spells& spell) {
 				<< "\n2) Items"
 				<< "\n3) Melee"
 				<< "\n4) Defense"
-				<< "\n5) Control\n";
+				<< "\n5) Control\n"
+				<< "-------\n6) Help\n";
 			std::cin >> specialityChosen;
 			
 
 			if(handleInputFailure("\Invalid Input, enter a number from 1-5")) {
 				continue;
 			}
-			if (specialityChosen > 5 || specialityChosen < 1) {
+			if (specialityChosen > 6 || specialityChosen < 1) {
 				std::cout << "\Invalid Input, enter a number from 1-4";
 				continue;
 			}
@@ -3980,6 +4251,7 @@ void pickSpeciality(character& player, spells& spell) {
 				bonusSpellSlots++;
 				bonusSpellDamage = 2;
 				playerSpeciality = "Magic";
+				spell.grantPlayerSpell(9);
 				specialityPicked = true;
 				break;
 			case 2: // items
@@ -3987,6 +4259,7 @@ void pickSpeciality(character& player, spells& spell) {
 				bonusFreeItemTurnChance = 5;
 				bonusRecycle += 1;
 				player.grantGold(10);
+				spell.grantPlayerSpell(15);
 				playerSpeciality = "Items";
 				specialityPicked = true;
 				break;
@@ -4002,6 +4275,7 @@ void pickSpeciality(character& player, spells& spell) {
 				bonusDefense = 5;
 				bonusHealth = 4;
 				bonusDefensiveStanceDuration = 2;
+				spell.grantPlayerSpell(25);
 				playerSpeciality = "Defense";
 				specialityPicked = true;
 				break;
@@ -4013,26 +4287,53 @@ void pickSpeciality(character& player, spells& spell) {
 				playerSpeciality = "Control";
 				specialityPicked = true;
 				break;
+
+			case 6: //help
+				displaySpecialityHelp();
+				clear();
+				break;
 			}
 			
 		}
 		
 	}
-void doSpecialEvent(items& item) {
+void doSpecialEvent(items& item, shrine& shrines) {
 
 	char randomEvent = rand() % 10;
 
 	switch (randomEvent) {
 
 	case 1:
+		shrines.findShrine();
+		break;
+	case 2: {
+		std::cout << "\nYou stumble upon a random item.. its a...";
+
+		std::cout << "\n..Press enter to find out..";
+		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		std::cin.get();
+
+		unsigned short randomItem = rand() % 20; //doesn't cover all items
+		item.updateItem(randomItem);
+		std::string itemName = item.getName();
+		std::cout << "\nIt's a " << itemName << "!";
+		item.grantPlayerItem(randomItem);
+		std::cout << "\n..Press enter to continue..";
+		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		std::cin.get();
 
 		break;
-	case 2:
-		
-		break;
-
+	}
 	case 3:
+		if (shrines.zoneShrinesEncountered == 0) shrines.findShrine();
 
+		break;
+	case 4:
+		if (shrines.zoneShrinesEncountered == 0) shrines.findShrine();
+		break;
+	case 5:
+		break;
+	case 6:
 		break;
 	default:
 		
@@ -4052,8 +4353,8 @@ int main() {
 	character test1(0, 0, 0, 0, 0, 0);
 	zoneHandler zone(test1);
 	pickName(test1);
-	pickNameColor(test1);
-
+	//pickNameColor(test1); this is kind of pointless and might just confuse players more
+	shrine shrines(test1);
 
 	bool gameStarted = false;
 
@@ -4077,6 +4378,7 @@ int main() {
 	test.enemySet(20, 20, 1, 4, 10, 20, '1', "beebie", test1);
 	shop shoptest(spelltest, testitem, test1, test, zone);
 	combatHandler combat1(test1, test, spelltest, testitem, shoptest, teststatus,zone);
+	shrines.assignGodBonuses(gods);
 	zone.newZone();
 	while (test1.playerHealth > 0) {
 		battling = true;
@@ -4090,7 +4392,10 @@ int main() {
 			roundsPassed = 0;
 			shoptest.shopMenu();
 		}
-		zone.zoneChecker(totalRounds);
+		doSpecialEvent(testitem, shrines);
+		if (zone.zoneChecker(totalRounds)) {
+			shrines.zoneShrinesEncountered = 0;
+		};
 	}
 	
 	
