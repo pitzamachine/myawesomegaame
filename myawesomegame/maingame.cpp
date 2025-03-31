@@ -868,7 +868,7 @@ public:
 			newEffect.statusId = '7';
 			newEffect.type = 'b';
 			newEffect.strengthValue = 7 + bonusDefense;
-			newEffect.duration = 3 + bonusDefensiveStanceDuration + bonusStatusDuration;
+			newEffect.duration = 3 + bonusDefensiveStanceDuration;
 			newEffect.buffTarget = '6';
 			break;
 		case 8:
